@@ -61,7 +61,7 @@ ignoring fact that it should really only occur at the beginning of the line.")
     ;; terms such as \(x,y). x + y
     (mapc (lambda (c) (modify-syntax-entry c "w" st)) "'")
     (mapc (lambda (c) (modify-syntax-entry c "_" st)) "$_")
-    (mapc (lambda (c) (modify-syntax-entry c "."  st)) ".%&+-/:<=>?@`^|!~#,;")
+    (mapc (lambda (c) (modify-syntax-entry c "."  st)) ".%&+-/:<=>?@`^|!~#,;∀∃")
     st)
   "The syntax table used in `holscript-mode'.")
 
@@ -152,11 +152,11 @@ On existing quotes, toggles between ‘-’ and “-” pairs.  Otherwise, inser
            (setq n (- n 1))))
         ((< n 0)
          (setq n (- n))
-         (setq n (- n (if (equal (skip-syntax-backward ".") 0) 0 1))))
+         (setq n (- n (if (equal (skip-syntax-backward ".") 0) 0 1)))
          (while (> n 0)
            (skip-syntax-backward "^.")
            (skip-syntax-backward ".")
-           (setq n (- n 1)))))
+           (setq n (- n 1))))))
 
 (defun is-a-then (s)
   (and s (or (string-equal s "THEN")
@@ -1065,17 +1065,19 @@ class characters.")
       (let ((sclass-number (syntax-class (syntax-after (1- (point))))))
       (cond
        (; am I just after a keyword?
-        (and (or
-              (looking-back holscript-column0-keywords-regexp (- (point) 15) t)
-              (looking-back "^\\(Datatype\\)[[:space:]]*:" (- (point) 20) t))
+        (and (save-excursion
+               (backward-word)
+               (or
+                (looking-at holscript-column0-keywords-regexp)
+                (looking-at "^\\(Datatype\\)[[:space:]]*:")))
              (let ((syn (syntax-after (point))))
                ; next char is whitespace or colon or left square bracket
                (or (null syn) (= 0 (car syn)) (char-equal (char-after) ?:)
                    (char-equal (char-after) ?\[)))
-               (save-excursion
-                 (goto-char (match-beginning 0))
-                 (skip-chars-backward " \t")
-                 (bolp)))
+             (save-excursion
+               (goto-char (match-beginning 0))
+               (skip-chars-backward " \t")
+               (bolp)))
         (goto-char (match-beginning 0))
         (let ((ms (match-string-no-properties 0)))
           (if (or (string=  ms "Theorem") (string= ms "Triviality"))
@@ -1392,3 +1394,16 @@ class characters.")
 
 (setq auto-mode-alist (cons '("Script\\.sml" . holscript-mode)
                             auto-mode-alist))
+
+(if (fboundp 'yas-minor-mode)
+    (progn
+      (setq yas-snippet-dirs
+            (append
+             yas-snippet-dirs
+             (list (concat
+                    hol-dir
+                    "tools/editor-modes/emacs/yasnippets"))))
+      (yas-reload-all)
+      (add-hook 'holscript-mode-hook #'yas-minor-mode)
+      (add-hook 'holscript-mode-hook
+                (lambda () (setq yas-also-auto-indent-first-line t)))))
