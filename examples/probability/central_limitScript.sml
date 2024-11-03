@@ -1,16 +1,6 @@
-(*---------------------------------------------------------------------------*
- * tempScript.sml:                                                           *
- *                                                                           *
- * A template theory script suitable for Holmake. If you are going to use it *
- * for theory "x", you must change the name of this file to "xScript.sml",   *
- * and the argument to "new_theory" below must be changed to be "x".         *
- *---------------------------------------------------------------------------*)
-
-
-(*---------------------------------------------------------------------------*
- * First, make standard environment available.                               *
- *---------------------------------------------------------------------------*)
-
+(* ========================================================================= *)
+(* The Central Limit Theorems                                                *)
+(* ========================================================================= *)
 
 open HolKernel Parse boolLib bossLib;
 
@@ -22,16 +12,329 @@ open realTheory realLib iterateTheory seqTheory transcTheory real_sigmaTheory
 
 open util_probTheory extrealTheory sigma_algebraTheory measureTheory
      real_borelTheory borelTheory lebesgueTheory martingaleTheory
-     probabilityTheory derivativeTheory;
+     probabilityTheory derivativeTheory integralTheory extreal_baseTheory;
 
 val _ = new_theory "central_limit";
 
 
+
+Definition normal_density :
+    normal_density mu sig x =
+      (1 / sqrt (2 * pi * sig pow 2)) * exp (-((x - mu) pow 2) / (2 * sig pow 2))
+End
+
+Overload std_normal_density = “normal_density 0 1”
+
+Theorem std_normal_density_def :
+    !x. std_normal_density x = (1 / sqrt (2 * pi)) * exp (-(x pow 2) / 2)
+Proof
+    RW_TAC std_ss [normal_density]
+ >> SIMP_TAC real_ss [REAL_SUB_RZERO, POW_ONE]
+QED
+
+Theorem normal_density_nonneg :
+    !mu sig x. 0 <= normal_density mu sig x
+Proof
+  RW_TAC std_ss [normal_density] THEN MATCH_MP_TAC REAL_LE_MUL THEN
+  SIMP_TAC std_ss [EXP_POS_LE, GSYM REAL_INV_1OVER, REAL_LE_INV_EQ] THEN
+  MATCH_MP_TAC SQRT_POS_LE THEN MATCH_MP_TAC REAL_LE_MUL THEN CONJ_TAC THENL
+  [MATCH_MP_TAC REAL_LE_MUL THEN SIMP_TAC real_ss [REAL_LE_LT, PI_POS],
+   ALL_TAC] THEN
+  SIMP_TAC real_ss [REAL_LE_POW2]
+QED
+
+Theorem normal_density_pos :
+    !mu sig. 0 < sig ==> 0 < normal_density mu sig x
+Proof
+  RW_TAC std_ss [normal_density] THEN MATCH_MP_TAC REAL_LT_MUL THEN
+  SIMP_TAC std_ss [EXP_POS_LT, GSYM REAL_INV_1OVER, REAL_LT_INV_EQ] THEN
+  MATCH_MP_TAC SQRT_POS_LT THEN MATCH_MP_TAC REAL_LT_MUL THEN CONJ_TAC THENL
+  [MATCH_MP_TAC REAL_LT_MUL THEN SIMP_TAC real_ss [PI_POS], ALL_TAC] THEN
+  MATCH_MP_TAC REAL_POW_LT >> art []
+QED
+
+Theorem normal_density_continuous_on :
+    !mu sig s. normal_density mu sig continuous_on s
+Proof
+    rpt GEN_TAC
+ >> ‘normal_density mu sig =
+       (\x. 1 / sqrt (2 * pi * sig pow 2) *
+            exp (-((x - mu) pow 2) / (2 * sig pow 2)))’
+       by rw [normal_density, FUN_EQ_THM]
+ >> POP_ORW
+ >> HO_MATCH_MP_TAC (SIMP_RULE std_ss [o_DEF] CONTINUOUS_ON_COMPOSE)
+ >> reverse CONJ_TAC
+ >- (‘$* (1 / sqrt (2 * pi * sig pow 2)) = \x. (1 / sqrt (2 * pi * sig pow 2)) * x’
+       by rw [FUN_EQ_THM] >> POP_ORW \\
+     HO_MATCH_MP_TAC CONTINUOUS_ON_CMUL >> rw [CONTINUOUS_ON_ID])
+ >> HO_MATCH_MP_TAC (SIMP_RULE std_ss [o_DEF] CONTINUOUS_ON_COMPOSE)
+ >> reverse CONJ_TAC
+ >- rw [CONTINUOUS_ON_EXP]
+ >> REWRITE_TAC [real_div, Once REAL_MUL_COMM]
+ >> HO_MATCH_MP_TAC CONTINUOUS_ON_CMUL
+ >> REWRITE_TAC [Once REAL_NEG_MINUS1]
+ >> HO_MATCH_MP_TAC CONTINUOUS_ON_CMUL
+ >> HO_MATCH_MP_TAC CONTINUOUS_ON_POW
+ >> HO_MATCH_MP_TAC CONTINUOUS_ON_SUB
+ >> rw [CONTINUOUS_ON_ID, CONTINUOUS_ON_CONST]
+QED
+
+Theorem in_measurable_borel_normal_density :
+    !mu sig. normal_density mu sig IN borel_measurable borel
+Proof
+    rpt GEN_TAC
+ >> MATCH_MP_TAC in_borel_measurable_continuous_on
+ >> rw [normal_density_continuous_on]
+QED
+
+Theorem IN_MEASURABLE_BOREL_normal_density :
+    !mu sig. Normal o normal_density mu sig IN Borel_measurable borel
+Proof
+    rpt GEN_TAC
+ >> HO_MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL'
+ >> rw [sigma_algebra_borel, in_measurable_borel_normal_density]
+QED
+
+
+Overload ext_normal_density = “\mu sig. Normal o normal_density mu sig o real”
+
+
+Definition normal_measure_def :
+  normal_measure mu sig s =
+  pos_fn_integral ext_lborel (\x. ext_normal_density mu sig x * indicator_fn s x)
+End
+
+Definition normal_rv_def :
+  normal_rv X p mu sig <=> real_random_variable X p /\
+                           !s. s IN subsets Borel ==>
+                               distribution p X s = normal_measure mu sig s
+End
+
+(* ------------------------------------------------------------------------- *)
+
+Definition third_moment_def:
+  third_moment p X = central_moment p X 3
+End
+
+Definition absolute_third_moment_def:
+  absolute_third_moment p X  = absolute_moment p X 0 3
+End
+
+Theorem converge_in_dist_cong_full:
+  !p X Y A B m. prob_space p ∧
+                (!n x. m <= n /\ x IN p_space p ==> X n x = Y n x) /\
+                (!x. x IN p_space p ==> A x = B x) ==>
+                ((X --> A) (in_distribution p) <=> (Y --> B) (in_distribution p))
+Proof
+  rw [converge_in_dist, EXTREAL_LIM_SEQUENTIALLY]
+  >> EQ_TAC >> rw []
+  (*  ∃N. ∀n. N ≤ n ⇒
+         dist extreal_mr1 (expectation p (f ∘ Y n),expectation p (f ∘ B)) < e *)
+  >> Q.PAT_X_ASSUM ‘ ∀f. f bounded_on 𝕌(:extreal) ∧ f ∘ Normal continuous_on 𝕌(:real)
+                         ==> P’ (MP_TAC o (Q.SPEC ‘f’)) >> rw []
+  >> POP_ASSUM (MP_TAC o (Q.SPEC ‘e’)) >> rw []
+  >> Q.EXISTS_TAC ‘MAX N m’ >> rw [MAX_LE]
+
+  >- (
+   Know ‘expectation p (f ∘ Y n) =
+           expectation p (f ∘ X n)’
+  >- (MATCH_MP_TAC expectation_cong \\ rw[])
+  >> DISCH_TAC
+
+  >> Know ‘expectation p (f ∘ B) =
+           expectation p (f ∘ A)’
+  >- (MATCH_MP_TAC expectation_cong \\ rw[])
+  >> DISCH_TAC
+  >> METIS_TAC []
+    )
+
+  >> Know ‘expectation p (f ∘ Y n) =
+           expectation p (f ∘ X n)’
+  >- (MATCH_MP_TAC expectation_cong \\ rw[])
+  >> DISCH_TAC
+  >> Know ‘expectation p (f ∘ B) =
+           expectation p (f ∘ A)’
+  >- (MATCH_MP_TAC expectation_cong \\ rw[])
+  >> DISCH_TAC
+  >> METIS_TAC []
+QED
+
+Theorem converge_in_dist_cong:
+  ∀p X Y Z m. prob_space p ∧
+    (∀n x. m ≤ n ∧ x ∈ p_space p ⇒ X n x = Y n x) ⇒
+    ((X ⟶ Z) (in_distribution p) ⇔ (Y ⟶ Z) (in_distribution p))
+Proof
+  rpt STRIP_TAC
+  >> MATCH_MP_TAC converge_in_dist_cong_full
+  >> Q.EXISTS_TAC ‘m’ >> rw []
+QED
+
+Theorem liapounov_ineq:
+  !m u v. measure_space m /\ u IN lp_space r m ∧  u IN lp_space r' m ∧
+          0 < r ∧
+          r < r' ∧
+          r' < PosInf  ==>
+          seminorm r m u ≤ seminorm r' m u
+Proof
+
+  rpt GEN_TAC >> STRIP_TAC
+  >> ‘0 < r'’ by METIS_TAC [lt_trans]
+  >> ‘r < PosInf’ by METIS_TAC [lt_trans]
+  >> ‘r <> 0 ∧ r' ≠ 0’ by rw [lt_imp_ne]
+  >> ‘r ≠ PosInf ∧ r' ≠ PosInf ’ by rw[lt_imp_ne]
+  >> ‘NegInf < r ∧ NegInf < r'’ by METIS_TAC [extreal_0_simps, lt_trans]
+  >> ‘r ≠ NegInf ∧ r' ≠ NegInf’ by METIS_TAC [lt_imp_ne]
+  >> ‘0 < r' - r’ by METIS_TAC[sub_zero_lt]
+  >> ‘r' - r ≠ 0’ by METIS_TAC[lt_imp_ne]
+  >> ‘r' - r ≠ NegInf ∧ r' - r ≠ PosInf’ by METIS_TAC [sub_not_infty]
+  >> Know ‘inv r <> PosInf /\ inv r <> NegInf’
+  >- (MATCH_MP_TAC inv_not_infty >> art []) >> DISCH_TAC
+  >> Know ‘inv r' <> PosInf /\ inv r' <> NegInf’
+  >- (MATCH_MP_TAC inv_not_infty >> art []) >> DISCH_TAC
+  >> ‘u IN measurable (m_space m,measurable_sets m) Borel’
+    by gs [lp_space_def]
+  >>  ‘seminorm r m u <> PosInf /\ seminorm r m u <> NegInf /\
+       seminorm r' m u <> PosInf /\ seminorm r' m u <> NegInf’
+    by PROVE_TAC [seminorm_not_infty]
+  >>  ‘0 ≤ seminorm r m u /\ 0 ≤ seminorm r' m u ’
+    by PROVE_TAC [seminorm_pos]
+  >> rw [seminorm_def]
+  >> Q.ABBREV_TAC ‘f = λx. abs (u x)’ >> rw[]
+  >> Know ‘∀x. x IN m_space m ⇒ 0 ≤ f x’
+  >- (METIS_TAC [abs_pos])
+  >> DISCH_TAC
+  >> Know ‘∀x. x IN m_space m ⇒ 0 ≤ f x powr r ∧  0 ≤ f x powr r'’
+  >- (METIS_TAC [powr_pos])
+  >> DISCH_TAC
+  >> Know ‘∀x. x IN m_space m ⇒ 0 ≤ (f x powr r) powr inv(r) ∧  0 ≤ (f x powr r') powr inv(r')’
+  >- (METIS_TAC [powr_pos])
+  >> DISCH_TAC
+
+  >> Know ‘∀x. x IN m_space m ⇒  f x ≠ PosInf’
+  >- (cheat)
+  >> DISCH_TAC
+
+
+  >> Cases_on ‘ 1 ≤ f x’
+  >- Know ‘∀x. x IN m_space m ⇒ f x powr r ≤  f x powr r'’
+  >- (cheat)
+  >> DISCH_TAC
+  >> Know ‘∫⁺ m (λx. f x powr r) ≤  ∫⁺ m (λx. f x powr r')’
+  >- (cheat)
+  >> DISCH_TAC
+  >> Know ‘∫⁺ m (λx. f x powr r) powr inv(r) ≤  ∫⁺ m (λx. f x powr r') powr inv(r)’
+  >- (cheat)
+  >> DISCH_TAC
+  >> Know ‘∫⁺ m (λx. f x powr r') powr inv(r) ≤  ∫⁺ m (λx. f x powr r') powr inv(r')’
+  >- (cheat)
+  >> DISCH_TAC
+
+  >> Q.ABBREV_TAC ‘A = ∫⁺ m (λx. f x powr r)’
+  >> Q.ABBREV_TAC ‘B = ∫⁺ m (λx. f x powr r')’
+  >> MATCH_MP_TAC le_trans
+  >> cheat
+
+  >> Cases_on ‘f x < 1’
+  >- Know ‘∀x. x IN m_space m ⇒ f x powr r' ≤  f x powr r’
+  >- (cheat)
+  >> DISCH_TAC
+  >> Know ‘∫⁺ m (λx. f x powr r') ≤  ∫⁺ m (λx. f x powr r)’
+  >- (cheat)
+  >> DISCH_TAC
+  >> Know ‘∫⁺ m (λx. f x powr r) powr inv(r) ≤  ∫⁺ m (λx. f x powr r') powr inv(r)’
+  >- (cheat)
+  >> DISCH_TAC
+  >> Know ‘∫⁺ m (λx. f x powr r') powr inv(r) ≤  ∫⁺ m (λx. f x powr r') powr inv(r')’
+  >- (cheat)
+  >> DISCH_TAC
+
+  >> Q.ABBREV_TAC ‘A = ∫⁺ m (λx. f x powr r)’
+  >> Q.ABBREV_TAC ‘B = ∫⁺ m (λx. f x powr r')’
+  >> MATCH_MP_TAC le_trans
+  >> cheat
+
+  >> cheat
+QED
+
+Definition gamma_function_def:
+  gamma_function f z ⇔ z
+End
+
+Theorem moment_pdf_def:
+  ∀p X Y a r. moment (density p X) Y a r =
+              expectation p (λx. (Y x - a) powr &r * normal_density mu sig x)
+Proof
+  rpt STRIP_TAC
+  >> rw [moment_def]
+  >> cheat
+
+QED
+
+
+
+Theorem normal_absolute_third_moment:
+  ∀p X sig. normal_rv X p 0 sig ⇒
+            absolute_third_moment p X = sqrt (8/π)  *  variance p X  * sqrt (variance p X)
+Proof
+  rpt STRIP_TAC
+  >> rw[absolute_third_moment_def, absolute_moment_def, normal_rv_def]
+  >> FULL_SIMP_TAC std_ss [normal_rv_def, normal_measure_def]
+
+  >>  ‘normal_density 0 sig x =
+       (1 / sqrt (2 * pi * sig pow 2) *
+        exp (-(x pow 2) / (2 * sig pow 2)))’
+    by rw [normal_density, FUN_EQ_THM]
+  >> cheat
+QED
+
+
+Definition second_moments_def:
+  second_moments p X n = SIGMA (λi. central_moment p (X i) 2) (count1 n)
+End
+
+
+Definition third_moments_def:
+  third_moments p X n = SIGMA (λi. third_moment p (X i)) (count1 n)
+End
+
+
+Theorem central_limit:
+  ∀p X N s b. prob_space p ∧
+              (∀i. real_random_variable (X i) p) ∧
+              normal_rv N p 0 (real (standard_deviation p (X 0))) ∧
+              (∀i. expectation p (X i) = 0) ∧
+              (∀i. central_moment p (X i) 2 < PosInf) ∧
+              (∀i. third_moment p (X i) < PosInf) ∧
+              (∀n. s n = sqrt (second_moments p X n)) ∧
+              (∀n. b n = third_moments p X n) ∧
+              ((\n. b n / (s n pow 3)) --> 0) sequentially
+            ⇒ ((\n x. (Σ (λi. X i x) (count1 n)) / s n) --> N) (in_distribution p)
+Proof
+  rpt STRIP_TAC
+  >> rw [converge_in_dist]
+  >> cheat
+
+QED
+
+
+
+
+
+(* ------------------------------------------------------------------------- *)
+
+
+
+
+
+
+(*
 Definition mgf_def:
   mgf p X s  =
   expectation p (\x. exp (Normal s * X x))
 End
+*)
 
+(*
 Theorem mgf_0:
   !p X. prob_space p ==> mgf p X 0 = 1
 Proof
@@ -269,9 +572,19 @@ QED
 
 
 
+*)
 
 (*---------------------------------------------------------------------------*
  * Write the theory to disk.                                                 *
  *---------------------------------------------------------------------------*)
 
 val _ = export_theory();
+val _ = html_theory "central_limit";
+
+(* References:
+
+  [1] Shiryaev, A.N.: Probability-1. Springer-Verlag New York (2016).
+  [2] Shiryaev, A.N.: Probability-2. Springer-Verlag New York (2019).
+  [3] Chung, K.L.: A Course in Probability Theory, Third Edition. Academic Press (2001).
+
+ *)
