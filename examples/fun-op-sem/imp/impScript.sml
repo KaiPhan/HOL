@@ -104,6 +104,29 @@ val cval_ind = prove(
 
 Theorem cval_ind[allow_rebind] = cval_ind
 
+Theorem seq_none:
+  cval (Seq c c') s t = NONE <=>
+    cval c s t = NONE \/
+    ?s' t'. cval c s t = SOME (s', t') /\ cval c' s' t' = NONE
+Proof
+  simp[EQ_IMP_THM] >>
+  conj_tac >>
+  rw[cval_def, CaseEq"option"] >>
+  simp[] >>
+  Cases_on `v` >>
+  fs[]
+QED
+
+Theorem skip_elim[simp]:
+  cval (Seq c1 SKIP) s t = cval c1 s t
+Proof
+  simp[cval_def] >>
+  Cases_on `cval c1 s t` >>
+  simp[] >>
+  Cases_on `x` >>
+  simp[]
+QED
+
 Theorem lrg_clk:
   !c s t t' s1 t1.
     t ≤ t' ∧ cval c s t = SOME (s1,t1) ==>
