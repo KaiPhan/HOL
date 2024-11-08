@@ -12,7 +12,7 @@ open realTheory realLib iterateTheory seqTheory transcTheory real_sigmaTheory
 
 open util_probTheory extrealTheory sigma_algebraTheory measureTheory
      real_borelTheory borelTheory lebesgueTheory martingaleTheory
-     probabilityTheory derivativeTheory integralTheory extreal_baseTheory;
+     probabilityTheory derivativeTheory extreal_baseTheory;
 
 val _ = new_theory "central_limit";
 
@@ -492,6 +492,7 @@ Proof
 QED
 *)
 
+(*
 Theorem normal_absolute_third_moment:
     ∀p X sig. normal_rv X p 0 sig ⇒
               absolute_third_moment p X = sqrt (8 / pi)  *  variance p X  * sqrt (variance p X)
@@ -506,63 +507,7 @@ Proof
     by rw [normal_density, FUN_EQ_THM]
  >> cheat
 QED
-
-(* See, e.g., [3, p.117] *)
-Definition weak_converge_def :
-    weak_converge fi (f :extreal measure) =
-    !g. bounded (IMAGE g UNIV) /\ (g o Normal) continuous_on UNIV ==>
-        ((\n. integral (space Borel,subsets Borel,fi n) g) -->
-          integral (space Borel,subsets Borel,f) g) sequentially
-End
-
-Overload "-->" = “weak_converge”
-
-Theorem converge_in_dist_alt :
-    !p X Y. prob_space p /\
-           (!n. real_random_variable (X n) p) /\ real_random_variable Y p ==>
-           ((X --> Y) (in_distribution p) <=>
-            (\n. distribution p (X n)) --> distribution p Y)
-Proof
-    rw [converge_in_dist, weak_converge_def, expectation_def, distribution_distr,
-        real_random_variable, p_space_def, events_def, prob_space_def]
- (* applying integral_distr *)
- >> cheat
-QED
-
-Theorem converge_in_dist_alt' :
-    !p X Y. prob_space p /\
-           (!n. real_random_variable (X n) p) /\ real_random_variable Y p ==>
-           ((X --> Y) (in_distribution p) <=>
-            !f. bounded (IMAGE f univ(:extreal)) /\
-               (f o Normal) continuous_on univ(:real) ==>
-               ((\n. expectation p (f o (X n))) --> expectation p (f o Y)) sequentially)
-Proof
-    rw [converge_in_dist_alt, weak_converge_def, distribution_distr, expectation_def,
-        prob_space_def, real_random_variable, p_space_def, events_def]
- >> EQ_TAC >> rw []
- >- (Know ‘!n. integral p (f o X n) = integral (space Borel,subsets Borel,distr p (X n)) f’
-     >- (Q.X_GEN_TAC ‘n’ \\
-         ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
-         MATCH_MP_TAC (cj 1 integral_distr) >> simp [SIGMA_ALGEBRA_BOREL] \\
-         cheat) >> Rewr' \\
-     Know ‘!n. integral p (f o Y) = integral (space Borel,subsets Borel,distr p Y) f’
-     >- (Q.X_GEN_TAC ‘n’ \\
-         ONCE_REWRITE_TAC [EQ_SYM_EQ] \\
-         MATCH_MP_TAC (cj 1 integral_distr) >> simp [SIGMA_ALGEBRA_BOREL] \\
-         cheat) >> Rewr' \\
-     FIRST_X_ASSUM MATCH_MP_TAC (* or irule *) >> art [])
- >> Know ‘!n. integral (space Borel,subsets Borel,distr p (X n)) g = integral p (g o X n)’
- >- (Q.X_GEN_TAC ‘n’ \\
-     MATCH_MP_TAC (cj 1 integral_distr) >> simp [SIGMA_ALGEBRA_BOREL] \\
-     cheat)
- >> Rewr'
- >> Know ‘!n. integral (space Borel,subsets Borel,distr p Y) g = integral p (g o Y)’
- >- (Q.X_GEN_TAC ‘n’ \\
-     MATCH_MP_TAC (cj 1 integral_distr) >> simp [SIGMA_ALGEBRA_BOREL] \\
-     cheat)
- >> Rewr'
- >> FIRST_X_ASSUM MATCH_MP_TAC (* or irule *) >> art []
-QED
+*)
 
 Definition second_moments_def:
     second_moments p X n = SIGMA (λi. central_moment p (X i) 2) (count1 n)
@@ -593,8 +538,6 @@ Proof
  >> FULL_SIMP_TAC std_ss [normal_rv_def]
  >> cheat
 QED
-
-
 
 
 
