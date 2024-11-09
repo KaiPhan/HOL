@@ -482,32 +482,23 @@ Definition absolute_third_moment_def:
 End
 
 (* ------------------------------------------------------------------------- *)
-(*
-Theorem taylor_series:
-  ∀x y M f f' f'' net. (f has_derivative f') net ∧
-                       (f' has_derivative f'') net ⇒
-                        abs (f (x + y) - [ f (x) + f'(x) * y + f''(x) * (y powr 2)]) ≤ M * abs (y) powr 3 / 6
-Proof
-  cheat
-QED
-*)
 
-(*
+Theorem taylor_ineq:
+  ∀f diff.
+    (diff 0 = f ∧ ∀m x. (diff m diffl diff (SUC m) x) x) ⇒
+    ∀x y. ∃M.
+            abs (f (x + y) - (f x + diff 1 x * y + diff 2 x * (y powr 2) / 2)) ≤ (M * abs (y) powr 3) / 6
+Proof
+    cheat
+QED
+
+
 Theorem normal_absolute_third_moment:
     ∀p X sig. normal_rv X p 0 sig ⇒
-              absolute_third_moment p X = sqrt (8 / pi)  *  variance p X  * sqrt (variance p X)
+              absolute_third_moment p X = sqrt (8 / π)  *  variance p X  * sqrt (variance p X)
 Proof
-    rpt STRIP_TAC
- >> rw[absolute_third_moment_def, absolute_moment_def, normal_rv_def]
- >> FULL_SIMP_TAC std_ss [normal_rv_def, normal_measure_def]
-
- >> ‘normal_density 0 sig x =
-       (1 / sqrt (2 * pi * sig pow 2) *
-        exp (-(x pow 2) / (2 * sig pow 2)))’
-    by rw [normal_density, FUN_EQ_THM]
- >> cheat
+    cheat
 QED
-*)
 
 Definition second_moments_def:
     second_moments p X n = SIGMA (λi. central_moment p (X i) 2) (count1 n)
