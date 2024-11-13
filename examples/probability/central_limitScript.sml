@@ -489,7 +489,17 @@ Theorem taylor_ineq:
     ∀x y. ∃M.
             abs (f (x + y) - (f x + diff 1 x * y + diff 2 x * (y powr 2) / 2)) ≤ (M * abs (y) powr 3) / 6
 Proof
-    cheat
+  rpt STRIP_TAC
+  >> MP_TAC (Q.SPECL [‘f’, ‘diff’]
+              MCLAURIN_ALL_LE)
+  >> simp[]
+  >> DISCH_TAC
+  >> cheat
+
+(*
+  >> qx_genl_tac [‘x + y’, ‘3’]
+      >> ASSUME_TAC (Q.SPECL [‘x + y’, ‘3’, ‘M’] )
+ *)
 QED
 
 
@@ -526,8 +536,11 @@ Theorem central_limit:
             ⇒  ((\n x. (SIGMA (λi. X i x) (count1 n)) / s n) --> N) (in_distribution p)
 Proof
     rpt STRIP_TAC
- >> FULL_SIMP_TAC std_ss [normal_rv_def]
- >> cheat
+  >> Know ‘((\n x. (SIGMA (λi. X i x) (count1 n)) / s n) --> N) (in_distribution p) =
+           ((\n. expectation p (f o (X n))) --> expectation p (f o N)) sequentially’
+  >- (cheat) >> Rewr'
+  >> FULL_SIMP_TAC std_ss [normal_rv_def]
+  >> cheat
 QED
 
 
