@@ -483,6 +483,16 @@ End
 
 (* ------------------------------------------------------------------------- *)
 
+Theorem TAYLOR_REMAINDER:
+    ∀diff n x. ∃M t.abs t ≤ abs x ∧ diff n x ≤ M ⇒
+                   abs(diff n t / &FACT n * x pow n) ≤ M / &FACT n * abs (x) pow n
+Proof
+    rpt GEN_TAC
+ >> cheat
+
+QED
+
+
 Theorem taylor_ineq:
   ∀f diff.
     (diff 0 = f ∧ ∀m x. (diff m diffl diff (SUC m) x) x) ⇒
