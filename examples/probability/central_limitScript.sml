@@ -14,6 +14,8 @@ open util_probTheory extrealTheory sigma_algebraTheory measureTheory
      real_borelTheory borelTheory lebesgueTheory martingaleTheory
      probabilityTheory derivativeTheory extreal_baseTheory;
 
+open distributionTheory;
+
 val _ = new_theory "central_limit";
 
 
@@ -338,31 +340,34 @@ Theorem converge_in_dist_cong_full:
                  (!x. x IN p_space p ==> A x = B x) ==>
                  ((X --> A) (in_distribution p) <=> (Y --> B) (in_distribution p))
 Proof
-    rw [converge_in_dist, EXTREAL_LIM_SEQUENTIALLY]
+    rw [converge_in_dist_def, EXTREAL_LIM_SEQUENTIALLY]
  >> EQ_TAC >> rw []
- (*  ∃N. ∀n. N ≤ n ⇒
-         dist extreal_mr1 (expectation p (f ∘ Y n),expectation p (f ∘ B)) < e *)
- >> Q.PAT_X_ASSUM ‘ ∀f. f bounded_on 𝕌(:extreal) ∧ f ∘ Normal continuous_on 𝕌(:real)
-                         ==> P’ (MP_TAC o (Q.SPEC ‘f’)) >> rw []
+    (* ∃N. ∀n.
+          N ≤ n ⇒
+          dist extreal_mr1
+            (expectation p (Normal ∘ f ∘ real ∘ Y n),
+             expectation p (Normal ∘ f ∘ real ∘ B)) < e *)
+ >- (Q.PAT_X_ASSUM ‘ ∀f. bounded (IMAGE f 𝕌(:real)) ∧ f continuous_on 𝕌(:real)
+                        ==> P’ (MP_TAC o (Q.SPEC ‘f’)) >> rw []
  >> POP_ASSUM (MP_TAC o (Q.SPEC ‘e’)) >> rw []
  >> Q.EXISTS_TAC ‘MAX N m’ >> rw [MAX_LE]
- >- (Know ‘expectation p (f ∘ Y n) =
-           expectation p (f ∘ X n)’
+ >> sg ‘expectation p (Normal ∘ f ∘ real ∘ Y n) =
+        expectation p (Normal ∘ f ∘ real ∘ X n)’
  >- (MATCH_MP_TAC expectation_cong \\ rw[])
- >> DISCH_TAC
- >> Know ‘expectation p (f ∘ B) =
-          expectation p (f ∘ A)’
+ >> sg ‘expectation p (Normal ∘ f ∘ real ∘ B) =
+          expectation p (Normal ∘ f ∘ real ∘ A)’
  >- (MATCH_MP_TAC expectation_cong \\ rw[])
- >> DISCH_TAC
  >> METIS_TAC [])
- >> Know ‘expectation p (f ∘ Y n) =
-          expectation p (f ∘ X n)’
+ >> Q.PAT_X_ASSUM ‘ ∀f. bounded (IMAGE f 𝕌(:real)) ∧ f continuous_on 𝕌(:real)
+                        ==> P’ (MP_TAC o (Q.SPEC ‘f’)) >> rw []
+ >> POP_ASSUM (MP_TAC o (Q.SPEC ‘e’)) >> rw []
+ >> Q.EXISTS_TAC ‘MAX N m’ >> rw [MAX_LE]
+ >> sg ‘expectation p (Normal ∘ f ∘ real ∘ Y n) =
+        expectation p (Normal ∘ f ∘ real ∘ X n)’
  >- (MATCH_MP_TAC expectation_cong \\ rw[])
- >> DISCH_TAC
- >> Know ‘expectation p (f ∘ B) =
-          expectation p (f ∘ A)’
+ >> sg ‘expectation p (Normal ∘ f ∘ real ∘ B) =
+        expectation p (Normal ∘ f ∘ real ∘ A)’
  >- (MATCH_MP_TAC expectation_cong \\ rw[])
- >> DISCH_TAC
  >> METIS_TAC []
 QED
 
@@ -376,89 +381,10 @@ Proof
  >> Q.EXISTS_TAC ‘m’ >> rw []
 QED
 
+
 (* ------------------------------------------------------------------------- *)
 (*  Normal density                                                           *)
 (* ------------------------------------------------------------------------- *)
-
-(* NOTE: ‘normal_density m s’ is a function of “:real -> real”, where m is the
-   expectation, s is the standard deviation.
- *)
-Definition normal_density :
-    normal_density mu sig x =
-      (1 / sqrt (2 * pi * sig pow 2)) * exp (-((x - mu) pow 2) / (2 * sig pow 2))
-End
-
-Overload std_normal_density = “normal_density 0 1”
-
-Theorem std_normal_density_def :
-    !x. std_normal_density x = (1 / sqrt (2 * pi)) * exp (-(x pow 2) / 2)
-Proof
-    RW_TAC std_ss [normal_density]
- >> SIMP_TAC real_ss [REAL_SUB_RZERO, POW_ONE]
-QED
-
-Theorem normal_density_nonneg :
-  !mu sig x. 0 <= normal_density mu sig x
-Proof
-  RW_TAC std_ss [normal_density] THEN MATCH_MP_TAC REAL_LE_MUL THEN
-  SIMP_TAC std_ss [EXP_POS_LE, GSYM REAL_INV_1OVER, REAL_LE_INV_EQ] THEN
-  MATCH_MP_TAC SQRT_POS_LE THEN MATCH_MP_TAC REAL_LE_MUL THEN CONJ_TAC THENL
-  [MATCH_MP_TAC REAL_LE_MUL THEN SIMP_TAC real_ss [REAL_LE_LT, PI_POS],
-   ALL_TAC] THEN
-  SIMP_TAC real_ss [REAL_LE_POW2]
-QED
-
-Theorem normal_density_pos :
-    !mu sig. 0 < sig ==> 0 < normal_density mu sig x
-Proof
-  RW_TAC std_ss [normal_density] THEN MATCH_MP_TAC REAL_LT_MUL THEN
-  SIMP_TAC std_ss [EXP_POS_LT, GSYM REAL_INV_1OVER, REAL_LT_INV_EQ] THEN
-  MATCH_MP_TAC SQRT_POS_LT THEN MATCH_MP_TAC REAL_LT_MUL THEN CONJ_TAC THENL
-  [MATCH_MP_TAC REAL_LT_MUL THEN SIMP_TAC real_ss [PI_POS], ALL_TAC] THEN
-  MATCH_MP_TAC REAL_POW_LT >> art []
-QED
-
-Theorem normal_density_continuous_on :
-    !mu sig s. normal_density mu sig continuous_on s
-Proof
-    rpt GEN_TAC
- >> ‘normal_density mu sig =
-       (\x. 1 / sqrt (2 * pi * sig pow 2) *
-            exp (-((x - mu) pow 2) / (2 * sig pow 2)))’
-       by rw [normal_density, FUN_EQ_THM]
- >> POP_ORW
- >> HO_MATCH_MP_TAC (SIMP_RULE std_ss [o_DEF] CONTINUOUS_ON_COMPOSE)
- >> reverse CONJ_TAC
- >- (‘$* (1 / sqrt (2 * pi * sig pow 2)) = \x. (1 / sqrt (2 * pi * sig pow 2)) * x’
-       by rw [FUN_EQ_THM] >> POP_ORW \\
-     HO_MATCH_MP_TAC CONTINUOUS_ON_CMUL >> rw [CONTINUOUS_ON_ID])
- >> HO_MATCH_MP_TAC (SIMP_RULE std_ss [o_DEF] CONTINUOUS_ON_COMPOSE)
- >> reverse CONJ_TAC
- >- rw [CONTINUOUS_ON_EXP]
- >> REWRITE_TAC [real_div, Once REAL_MUL_COMM]
- >> HO_MATCH_MP_TAC CONTINUOUS_ON_CMUL
- >> REWRITE_TAC [Once REAL_NEG_MINUS1]
- >> HO_MATCH_MP_TAC CONTINUOUS_ON_CMUL
- >> HO_MATCH_MP_TAC CONTINUOUS_ON_POW
- >> HO_MATCH_MP_TAC CONTINUOUS_ON_SUB
- >> rw [CONTINUOUS_ON_ID, CONTINUOUS_ON_CONST]
-QED
-
-Theorem in_measurable_borel_normal_density :
-    !mu sig. normal_density mu sig IN borel_measurable borel
-Proof
-    rpt GEN_TAC
- >> MATCH_MP_TAC in_borel_measurable_continuous_on
- >> rw [normal_density_continuous_on]
-QED
-
-Theorem IN_MEASURABLE_BOREL_normal_density :
-    !mu sig. Normal o normal_density mu sig IN Borel_measurable borel
-Proof
-    rpt GEN_TAC
- >> HO_MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL'
- >> rw [sigma_algebra_borel, in_measurable_borel_normal_density]
-QED
 
 Overload ext_normal_density = “\mu sig. Normal o normal_density mu sig o real”
 
@@ -488,28 +414,22 @@ Theorem TAYLOR_REMAINDER:
                    abs(diff n t / &FACT n * x pow n) ≤ M / &FACT n * abs (x) pow n
 Proof
     rpt GEN_TAC
- >> cheat
-
+    >> qexistsl [‘M’, ‘t’]
+    >> STRIP_TAC
+    >> Know ‘diff n x / &FACT n ≤  M / &FACT n’
+    >> cheat
 QED
 
-
-Theorem taylor_ineq:
-  ∀f diff.
-    (diff 0 = f ∧ ∀m x. (diff m diffl diff (SUC m) x) x) ⇒
-    ∀x y. ∃M.
-            abs (f (x + y) - (f x + diff 1 x * y + diff 2 x * (y powr 2) / 2)) ≤ (M * abs (y) powr 3) / 6
+Theorem TAYLOR_THEOREM:
+  ∀f diff x n.
+    0 < h ∧ 0 < n ∧ diff 0 = f ∧
+    (∀m t. m < n ∧ 0 ≤ t ∧ t ≤ h ⇒ (diff m diffl diff (SUC m) t) t) ⇒
+    ∃t. 0 < t ∧ t < h ∧
+        f h =
+        sum (0,n) (λm. diff m 0 / &FACT m * (x - a) pow m) +
+        diff n t / &FACT n * h pow n
 Proof
-  rpt STRIP_TAC
-  >> MP_TAC (Q.SPECL [‘f’, ‘diff’]
-              MCLAURIN_ALL_LE)
-  >> simp[]
-  >> DISCH_TAC
-  >> cheat
-
-(*
-  >> qx_genl_tac [‘x + y’, ‘3’]
-      >> ASSUME_TAC (Q.SPECL [‘x + y’, ‘3’, ‘M’] )
- *)
+  cheat
 QED
 
 
@@ -520,6 +440,11 @@ Proof
     cheat
 QED
 
+Definition BigO_def:
+  BigO f g ⇔ ∃(M:real) x0. ∀x. x0 ≤ (x:real) ⇒
+                                abs (f x) ≤ M * abs (g x)
+End
+
 Definition second_moments_def:
     second_moments p X n = SIGMA (λi. central_moment p (X i) 2) (count1 n)
 End
@@ -529,11 +454,11 @@ Definition third_moments_def:
 End
 
 Theorem central_limit:
-    ∀p X Y N s b. prob_space p ∧
+  ∀p X Y N s b. prob_space p ∧
+                normal_rv N p 0 1 ∧
                (∀i. real_random_variable (X i) p) ∧
                (∀i j. indep_vars p (X i) (X j) Borel Borel) ∧
                (∀i. normal_rv (Y i) p 0 (real (standard_deviation p (X 0)))) ∧
-                    normal_rv N p 0 1 ∧
                (∀i. real_random_variable (Y i) p) ∧
                (∀i j. indep_vars p (Y i) (Y j) Borel Borel) ∧
                (∀i j. indep_vars p (X i) (Y j) Borel Borel) ∧
@@ -545,15 +470,36 @@ Theorem central_limit:
                ((\n. b n / (s n pow 3)) --> 0) sequentially
             ⇒  ((\n x. (SIGMA (λi. X i x) (count1 n)) / s n) --> N) (in_distribution p)
 Proof
-    rpt STRIP_TAC
-  >> Know ‘((\n x. (SIGMA (λi. X i x) (count1 n)) / s n) --> N) (in_distribution p) =
-           ((\n. expectation p (f o (X n))) --> expectation p (f o N)) sequentially’
-  >- (cheat) >> Rewr'
-  >> FULL_SIMP_TAC std_ss [normal_rv_def]
+     rpt STRIP_TAC
+  >> Q.ABBREV_TAC ‘Z = λn x. ∑ (λi. X i x) (count1 n) / s n’
+  >> fs[normal_rv_def]
+  >> Know ‘∀i. real_random_variable (Z i) p’
+     >- (fs[real_random_variable]
+         >> GEN_TAC
+         >> CONJ_TAC
+         >- (Q.UNABBREV_TAC ‘Z’
+             >> Know ‘(λn x. SIGMA (λi. X i x) (count1 n)) i ∈
+                             Borel_measurable (p_space p,events p)’
+             >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_SUM' \\
+                 simp[] \\
+                (* qexistsl_tac [‘X’, ‘count1 i’] \\*)
+                 cheat)
+             >> DISCH_TAC
+             >> Know ‘(λn x. SIGMA (λi. X i x) (count1 n) / s n) =
+                       λn x. Normal 1 / s n * SIGMA (λi. X i x) (count1 n)’
+             >- (cheat)
+             >> DISCH_TAC
+             >> ASM_REWRITE_TAC []
+             >> MATCH_MP_TAC IN_MEASURABLE_BOREL_CMUL
+             >> cheat)
+         (*∀x. x ∈ p_space p ⇒ Z i x ≠ −∞ ∧ Z i x ≠ +∞*)
+         >> GEN_TAC
+         >> DISCH_TAC
+         >> cheat)
+  >> DISCH_TAC
+  >> rw [converge_in_dist_alt']
   >> cheat
 QED
-
-
 
 (* ------------------------------------------------------------------------- *)
 (*  Moment generating function                                               *)
