@@ -30,7 +30,7 @@ Proof
  >> ‘p ≠ PosInf’ by rw[lt_imp_ne]
  >> ‘0 < p’ by METIS_TAC [lt_trans, lt_01]
  >> ‘p ≠ 0’ by rw[lt_imp_ne]
- >> ‘inv(p) ≠ NegInf ∧  inv(p) ≠ PosInf’ by rw[inv_not_infty]
+ >> ‘inv(p) ≠ NegInf ∧ inv(p) ≠ PosInf’ by rw[inv_not_infty]
  >> ‘p ≠ NegInf’ by METIS_TAC [extreal_0_simps, lt_trans]
  >> ‘0 < inv (p)’ by METIS_TAC [inv_pos']
  >> ‘inv(p) ≠ 0’ by rw[lt_imp_ne]
@@ -410,26 +410,120 @@ End
 (* ------------------------------------------------------------------------- *)
 
 Theorem TAYLOR_REMAINDER:
-    ∀diff n x. ∃M t.abs t ≤ abs x ∧ diff n x ≤ M ⇒
-                   abs(diff n t / &FACT n * x pow n) ≤ M / &FACT n * abs (x) pow n
+    ∀diff n x. ∃M t. abs (diff n t) ≤ M ⇒
+                     abs (diff n t / &FACT n * x pow n) ≤ M / &FACT n * abs (x) pow n
 Proof
     rpt GEN_TAC
     >> qexistsl [‘M’, ‘t’]
     >> STRIP_TAC
-    >> Know ‘diff n x / &FACT n ≤  M / &FACT n’
-    >> cheat
+    >> ‘diff n t / &FACT n = diff n t * (&FACT n)⁻¹’ by cheat
+    >> POP_ORW
+    >> ‘M / &FACT n =  M * (&FACT n)⁻¹’ by cheat
+    >> POP_ORW
+    >> ‘!n. &0 < &(FACT n)’ by rw [REAL_LT, FACT_LESS]
+    >> Know ‘abs (diff n t) * inv(&FACT n) ≤ M  * inv(&FACT n)’
+    >- (‘&FACT n ≠ NegInf ∧ &FACT n ≠ PosInf’ by cheat \\
+        ‘0 < inv(&FACT n)’ by cheat (* METIS_TAC[inv_pos']*) \\
+        ‘inv (&FACT n) ≠ PosInf’ by cheat \\
+        METIS_TAC [le_rmul])
+    >> DISCH_TAC
+    >> ‘0 ≤ abs (x pow n)’ by METIS_TAC [abs_pos]
+    >> ‘0 < abs (x pow n)’ by cheat
+    >> ‘abs (x pow n) ≠ PosInf’ by cheat
+    >> ‘abs (diff n t) * (&FACT n)⁻¹ * abs (x pow n) ≤ M * (&FACT n)⁻¹ * abs (x pow n)’ by
+       METIS_TAC [le_rmul]
+    >> ‘abs (diff n t) * (&FACT n)⁻¹ = abs (diff n t * (&FACT n)⁻¹)’ by cheat
+    >> ‘abs (diff n t * (&FACT n)⁻¹) * abs (x pow n) = abs (diff n t * (&FACT n)⁻¹ * x pow n)’ by
+       METIS_TAC [GSYM abs_mul]
+    >> ‘abs (x pow n) = abs x pow n’ by cheat
+    >> FULL_SIMP_TAC std_ss []
 QED
 
 Theorem TAYLOR_THEOREM:
-  ∀f diff x n.
-    0 < h ∧ 0 < n ∧ diff 0 = f ∧
-    (∀m t. m < n ∧ 0 ≤ t ∧ t ≤ h ⇒ (diff m diffl diff (SUC m) t) t) ⇒
-    ∃t. 0 < t ∧ t < h ∧
-        f h =
-        sum (0,n) (λm. diff m 0 / &FACT m * (x - a) pow m) +
-        diff n t / &FACT n * h pow n
+    ∀f diff a x n.
+                   0 < x ∧ a < x ∧ 0 < n ∧ diff 0 = f ∧
+                  (∀m t. m < n ∧ a ≤ t ∧ t ≤ x ⇒ (diff m diffl diff (SUC m) t) t) ⇒
+                     ∃t. a < t ∧ t < x ∧
+                         f x =
+                               sum (0,n) (λm. diff m a / &FACT m * (x − a) pow m) +
+                               diff n t / &FACT n * (x − a) pow n
 Proof
-  cheat
+    rpt STRIP_TAC
+    (* >> ASSUME_TAC (SPEC ‘∀x. g x = f (x + a)’) (*TODO: introduce g x*)
+     *)
+ >> Know ‘∀x. g x = f (x + a)’
+ >- (cheat)
+ >> DISCH_TAC
+ >> POP_ASSUM (MP_TAC o Q.SPEC ‘x - a’)
+ >> ‘f (x - a + a) = f x’ by METIS_TAC[REAL_SUB_ADD]
+ >> simp [] (*? auto do inv(FACT m)*)
+ >> DISCH_TAC
+ >> MP_TAC (Q.SPECL [‘g’, ‘diff’, ‘x - a’, ‘n’] MCLAURIN)
+ >> impl_tac
+ >- (CONJ_TAC
+     (* 0 < x − a *)
+     >- (rw[REAL_SUB_LT])
+     >> CONJ_TAC
+     (* 0 < n *)
+     >> fs[]
+     >> CONJ_TAC
+     (* diff 0 = g *)
+     >- (cheat)
+     (* ∀m t. m < n ∧ 0 ≤ t ∧ t ≤ x − a ⇒ (diff m diffl diff (SUC m) t) t *)
+     >> qx_genl_tac [‘m’, ‘t’]
+     >> Q.PAT_X_ASSUM ‘∀m t. m < n ∧ a ≤ t ∧ t ≤ x ⇒
+                             (diff m diffl diff (SUC m) t) t’
+         (MP_TAC o Q.SPECL [‘m’, ‘t + a’])
+     >> rw[]
+     >> ‘t + a ≤ x’ by METIS_TAC[REAL_LE_SUB_LADD]
+     >> FULL_SIMP_TAC std_ss []
+     >> cheat)
+ >> simp []
+ >> DISCH_TAC
+ >> Q.EXISTS_TAC ‘t’
+ >> ‘∀m. diff m 0 = diff m a ’ by cheat
+ >> FULL_SIMP_TAC std_ss []
+ >> ‘t = t'’ by cheat
+ >> simp []
+ >> ‘a < t'’ by cheat
+ >> ‘t'< x’ by cheat
+ >> simp []
+QED
+
+Theorem TAYLOR_CLT_LEMMA:
+  ∀diff (f:real -> real) x y. ∃M t.
+                                    diff (0:num) = f ∧
+                                    abs (diff (3:num) t) ≤ M ⇒
+                                    abs (f (x + y) - (f x + diff 1 x * y + diff 2 x / 2 * y pow 2)) ≤
+                                    M / 6 * abs y pow 3
+Proof
+  rpt GEN_TAC
+  >> qexistsl [‘M’, ‘t’]
+  >> STRIP_TAC
+  >> MP_TAC (Q.SPECL [‘f’, ‘diff’, ‘x’, ‘x + y’, ‘3’] TAYLOR_THEOREM)
+  >> impl_tac
+  >- (CONJ_TAC
+      (*  0 < x + y *)
+      >- (cheat)
+      >> CONJ_TAC
+      (* x < x + y *)
+      >- (cheat)
+      >> simp[]
+      >> cheat
+
+    (*  >> rpt GEN_TAC
+      >> qx_genl_tac [‘2’, ‘t’] *)
+     )
+  >> DISCH_TAC
+  >> ‘x + y − x = y’ by rw[REAL_ADD_SUB]
+  >> FULL_SIMP_TAC std_ss []
+  >> ‘sum (0,2) (λm. diff m x / &FACT m * y pow m) =
+      (f x + diff 1 x * y + diff 2 x / 2 * y²)’ by cheat
+  >> FULL_SIMP_TAC std_ss []
+  >> Q.ABBREV_TAC ‘Z = f x + diff 1 x * y + diff 2 x / 2 * y²’
+  >> ‘Z + diff 2 t' / &FACT 2 * y² − Z =  diff 2 t' / &FACT 2 * y²’ by rw[REAL_ADD_SUB]
+  >> POP_ORW
+  >> cheat
 QED
 
 
