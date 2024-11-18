@@ -16,6 +16,8 @@ open util_probTheory extrealTheory sigma_algebraTheory measureTheory
 
 open distributionTheory;
 
+open limTheory;
+
 val _ = new_theory "central_limit";
 
 
@@ -410,32 +412,35 @@ End
 (* ------------------------------------------------------------------------- *)
 
 Theorem TAYLOR_REMAINDER:
-    ∀diff n x. ∃M t. abs (diff n t) ≤ M ⇒
-                     abs (diff n t / &FACT n * x pow n) ≤ M / &FACT n * abs (x) pow n
+    ∀(diff:num -> real -> real) n (x:real). ∃M t. abs (diff n t) ≤ M ⇒
+                     abs (diff n t / (&FACT n:real) * x pow n) ≤ M / &FACT n * abs (x) pow n
 Proof
     rpt GEN_TAC
     >> qexistsl [‘M’, ‘t’]
     >> STRIP_TAC
-    >> ‘diff n t / &FACT n = diff n t * (&FACT n)⁻¹’ by cheat
+    >> ‘diff n t / &FACT n = diff n t * (&FACT n)⁻¹’ by METIS_TAC[real_div]
     >> POP_ORW
-    >> ‘M / &FACT n =  M * (&FACT n)⁻¹’ by cheat
+    >> ‘M / &FACT n =  M * (&FACT n)⁻¹’ by METIS_TAC[real_div]
     >> POP_ORW
-    >> ‘!n. &0 < &(FACT n)’ by rw [REAL_LT, FACT_LESS]
-    >> Know ‘abs (diff n t) * inv(&FACT n) ≤ M  * inv(&FACT n)’
-    >- (‘&FACT n ≠ NegInf ∧ &FACT n ≠ PosInf’ by cheat \\
-        ‘0 < inv(&FACT n)’ by cheat (* METIS_TAC[inv_pos']*) \\
-        ‘inv (&FACT n) ≠ PosInf’ by cheat \\
-        METIS_TAC [le_rmul])
+    >> ‘!n. &0 < (&FACT n:real)’ by rw [REAL_LT, FACT_LESS]
+    >> POP_ASSUM (MP_TAC o Q.SPEC ‘n’)
     >> DISCH_TAC
-    >> ‘0 ≤ abs (x pow n)’ by METIS_TAC [abs_pos]
+    >> ‘0 <= (&FACT n: real)’ by METIS_TAC [REAL_LT_IMP_LE]
+    >> ‘&0 < (inv(&FACT n):real)’ by  METIS_TAC [REAL_INV_POS]
+    >> ‘abs (diff n t) * inv(&FACT n) ≤ M  * inv(&FACT n)’ by
+        METIS_TAC [REAL_LE_RMUL]
+    >> ‘abs (inv(&FACT n:real)) = inv(&FACT n)’ by rw[ABS_REFL]
+    >> ‘abs (diff n t) * abs (&FACT n)⁻¹ = abs (diff n t) * (&FACT n)⁻¹’ by rw[]
+    >> ‘abs (diff n t) * abs (&FACT n)⁻¹ = abs (diff n t * (&FACT n)⁻¹)’ by METIS_TAC[ABS_MUL]
+    >> ‘abs (diff n t * (&FACT n)⁻¹) ≤ M  * inv(&FACT n)’ by METIS_TAC[]
+    >> ‘0 ≤ abs (x pow n)’ by METIS_TAC [REAL_ABS_POS]
     >> ‘0 < abs (x pow n)’ by cheat
-    >> ‘abs (x pow n) ≠ PosInf’ by cheat
-    >> ‘abs (diff n t) * (&FACT n)⁻¹ * abs (x pow n) ≤ M * (&FACT n)⁻¹ * abs (x pow n)’ by
-       METIS_TAC [le_rmul]
-    >> ‘abs (diff n t) * (&FACT n)⁻¹ = abs (diff n t * (&FACT n)⁻¹)’ by cheat
+    >> ‘abs (diff n t * (&FACT n)⁻¹) * abs (x pow n) ≤ M * (&FACT n)⁻¹ * abs (x pow n)’ by
+        METIS_TAC [REAL_LE_RMUL]
     >> ‘abs (diff n t * (&FACT n)⁻¹) * abs (x pow n) = abs (diff n t * (&FACT n)⁻¹ * x pow n)’ by
-       METIS_TAC [GSYM abs_mul]
-    >> ‘abs (x pow n) = abs x pow n’ by cheat
+        METIS_TAC [GSYM ABS_MUL]
+    >> FULL_SIMP_TAC std_ss []
+    >> ‘abs (x pow n) = (abs x) pow n’ by METIS_TAC [POW_ABS]
     >> FULL_SIMP_TAC std_ss []
 QED
 
@@ -476,7 +481,8 @@ Proof
          (MP_TAC o Q.SPECL [‘m’, ‘t + a’])
      >> rw[]
      >> ‘t + a ≤ x’ by METIS_TAC[REAL_LE_SUB_LADD]
-     >> FULL_SIMP_TAC std_ss []
+     >> FULL_SIMP_TAC std_ss [DIFF_CARAT]
+     >> Q.EXISTS_TAC ‘g'’
      >> cheat)
  >> simp []
  >> DISCH_TAC
@@ -507,22 +513,28 @@ Proof
       >- (cheat)
       >> CONJ_TAC
       (* x < x + y *)
-      >- (cheat)
+      >- (‘0 < y’ by cheat \\
+          METIS_TAC[REAL_LT_ADDR])
       >> simp[]
       >> cheat
-
     (*  >> rpt GEN_TAC
       >> qx_genl_tac [‘2’, ‘t’] *)
      )
   >> DISCH_TAC
   >> ‘x + y − x = y’ by rw[REAL_ADD_SUB]
   >> FULL_SIMP_TAC std_ss []
-  >> ‘sum (0,2) (λm. diff m x / &FACT m * y pow m) =
-      (f x + diff 1 x * y + diff 2 x / 2 * y²)’ by cheat
+  >> Know ‘sum (0,3) (λm. diff m x / &FACT m * y pow m) =
+           (f x + diff 1 x * y + diff 2 x / 2 * y²)’
+  >- (cheat
+     (*MP_TAC (Q.SPECL [‘0’, ‘2’, ‘diff’] sum) *)
+      )
+  >> DISCH_TAC
   >> FULL_SIMP_TAC std_ss []
   >> Q.ABBREV_TAC ‘Z = f x + diff 1 x * y + diff 2 x / 2 * y²’
-  >> ‘Z + diff 2 t' / &FACT 2 * y² − Z =  diff 2 t' / &FACT 2 * y²’ by rw[REAL_ADD_SUB]
+  >> ‘Z + diff 3 t' / &FACT 3 * y³ − Z =  diff 3 t' / &FACT 3 * y³’ by rw[REAL_ADD_SUB]
   >> POP_ORW
+  >> MP_TAC (Q.SPECL [‘diff’, ‘3’, ‘y’] TAYLOR_REMAINDER)
+ (* >> DISCH_THEN (Q.X_CHOOSE_THEN ‘M’ (Q.X_CHOOSE_THEN ‘t'’ MP_TAC)) *)
   >> cheat
 QED
 
