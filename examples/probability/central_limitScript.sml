@@ -20,7 +20,6 @@ open limTheory;
 
 val _ = new_theory "central_limit";
 
-
 Theorem liapounov_ineq_lemma:
     !m u p. measure_space m ∧
             measure m (m_space m) < PosInf ∧
@@ -479,87 +478,70 @@ Proof
      >> CONJ_TAC
     (* diff' 0 = g *)
      >- (rw[Abbr ‘diff'’])
-    (* ∀m t. m < n ∧ 0 ≤ t ∧ t ≤ x − a ⇒ (diff' m diffl diff' (SUC m) t) t *)
+     (* ∀m t. m < n ∧ 0 ≤ t ∧ t ≤ x − a ⇒ (diff' m diffl diff' (SUC m) t) t *)
+     >> Q.UNABBREV_TAC ‘diff'’
+     >> BETA_TAC
      >> qx_genl_tac [‘m’, ‘t’]
      >> STRIP_TAC
+     >> ‘a ≤ t + a’ by rw[REAL_LE_ADDL]
+     >> ‘t + a ≤ x’ by METIS_TAC[REAL_LE_SUB_LADD]
+     >> BETA_TAC
+     >> Know ‘(g diffl 1) t’
+     >- (Q.UNABBREV_TAC ‘g’ \\
+         Q.PAT_X_ASSUM ‘∀m t. m < n ∧ a ≤ t ∧ t ≤ x ⇒
+                                  (diff m diffl diff (SUC m) t) t’
+                                  (MP_TAC o Q.SPECL [‘0’, ‘t + a’]) \\
+         rw[diffl] \\
+         ‘diff 1 (t + a) = 1’ by cheat \\
+         ‘∀h. t + a + h = t + h + a’ by METIS_TAC[REAL_ADD_COMM, GSYM REAL_ADD_ASSOC] \\
+         FULL_SIMP_TAC std_ss [] \\
+         cheat)
+     >> DISCH_TAC
+     (* ((λx. diff m (x + a)) diffl diff (SUC m) (t + a)) t*)
      >> Q.PAT_X_ASSUM ‘∀m t. m < n ∧ a ≤ t ∧ t ≤ x ⇒
                             (diff m diffl diff (SUC m) t) t’
                             (MP_TAC o Q.SPECL [‘m’, ‘t + a’])
-     >> simp[Abbr ‘diff'’]
-     >> ‘t + a ≤ x’ by METIS_TAC[REAL_LE_SUB_LADD]
-     >> DISCH_TAC
-     >> MP_TAC (Q.SPECL [‘diff (m:num)’, ‘g’, ‘diff (SUC m) (t + a:real)’, ‘1’, ‘t’] DIFF_CHAIN)
-     >> impl_tac
-     >- (CONJ_TAC
-         (* (diff m diffl diff (SUC m) (t + a)) (g t) *)
-         >- (Q.UNABBREV_TAC ‘g’ \\
-             CONV_TAC (DEPTH_CONV BETA_CONV) (*???*) \\
-             ‘t + a = f (t + a)’ by cheat \\
-             METIS_TAC [])
-         (* (g diffl 1) t *)
-         >> Q.UNABBREV_TAC ‘g’
-         >> simp[diffl]
-         >> ‘∀h. f (t + h + a) = f (t + a) + h’ by cheat
-         >> simp[REAL_ADD_SUB]
-         (* ((λh. h / h) → 1) 0 *)
-         >> REWRITE_TAC[LIM, REAL_SUB_RZERO]
-         >> BETA_TAC
-         >> X_GEN_TAC “e:real”
-         >> DISCH_TAC
-         >> Q.EXISTS_TAC ‘&1’
-         >> REWRITE_TAC[REAL_LT_01]
-         >> GEN_TAC
-         >> DISCH_THEN(MP_TAC o CONJUNCT1)
-         >> REWRITE_TAC[GSYM ABS_NZ]
-         >> DISCH_THEN(fn th => REWRITE_TAC[MATCH_MP REAL_DIV_REFL th])
-         >> ASM_REWRITE_TAC[REAL_SUB_REFL, ABS_0])
-     >> simp[]
-     >> Q.UNABBREV_TAC ‘g’
-     >> DISCH_TAC
-     >> ‘(λx. f (x + a)) x = f (x + a)’ by cheat
-     >> cheat
-    )
+     >> simp[diffl]
+     >> ‘∀h. t + a + h = t + h + a’ by METIS_TAC[REAL_ADD_COMM, GSYM REAL_ADD_ASSOC]
+     >> FULL_SIMP_TAC std_ss []
+     >> cheat)
  >> simp[]
  >> DISCH_THEN (Q.X_CHOOSE_TAC ‘t’)
- >> Q.EXISTS_TAC ‘t’
- >> Q.PAT_X_ASSUM ‘∀m t. m < n ∧ a ≤ t ∧ t ≤ x ⇒
-                        (diff m diffl diff (SUC m) t) t’
-                        (MP_TAC o Q.SPECL [‘m’, ‘t + a’])
+ >> Q.EXISTS_TAC ‘t + a’
+ >> CONJ_TAC
+ >- (rw[REAL_LT_ADDL])
+ >> CONJ_TAC
+ >- (rw[REAL_LT_ADD_SUB])
+ >> Know ‘∀m. diff' m 0 = diff m a’
+    >- (Q.UNABBREV_TAC ‘diff'’ \\
+        BETA_TAC \\
+        simp[] )
  >> DISCH_TAC
- >> CONJ_TAC
- (* a < t *)
- >- (cheat)
- >> CONJ_TAC
- >- (cheat)
- >> ‘∀m. diff' m 0 = diff m a’ by cheat
  >> simp[]
- >> cheat
 QED
 
-(*
+
 Theorem TAYLOR_CLT_LEMMA:
-  ∀diff (f:real -> real) x y. ∃M t.3
-                             0 < y ∧ diff (0:num) = f ∧
+  ∀diff (f:real -> real) x y.
+                              0 < y ∧ diff (0:num) = f ⇒
+                              ∃M t.
                                     abs (diff (3:num) t) ≤ M ⇒
                                     abs (f (x + y) - (f x + diff 1 x * y + diff 2 x / 2 * y pow 2)) ≤
                                     M / 6 * abs y pow 3
 Proof
-  rpt GEN_TAC
-  >> qexistsl [‘M’, ‘t’]
-  >> STRIP_TAC
-  >> MP_TAC (Q.SPECL [‘f’, ‘diff’, ‘x’, ‘x + y’, ‘3’] TAYLOR_THEOREM)
-  >> impl_tac
-  >- (CONJ_TAC
-   (*   (*  0 < x + y *)
-      >- (cheat)
-      >> CONJ_TAC
-      (* x < x + y *)
-      >- (‘0 < y’ by cheat \\
-          METIS_TAC[REAL_LT_ADDR]) *)
-      >> simp[]
+    rpt GEN_TAC
+ >> STRIP_TAC
+ >> qexistsl [‘M’, ‘t’]
+ >> DISCH_TAC
+ >> MP_TAC (Q.SPECL [‘f’, ‘diff’, ‘x’, ‘x + y’, ‘3’] TAYLOR_THEOREM)
+ >> impl_tac
+ >- (CONJ_TAC
+     (* x < x + y *)
+     >- (METIS_TAC[REAL_LT_ADDR])
+     >> rpt GEN_TAC
       >> cheat
     (*  >> rpt GEN_TAC
-      >> qx_genl_tac [‘2’, ‘t’] *)
+      >> qx_genl_tac [‘m’, ‘t’] *)
      )
   >> DISCH_TAC
   >> ‘x + y − x = y’ by rw[REAL_ADD_SUB]
@@ -574,15 +556,10 @@ Proof
   >> Q.ABBREV_TAC ‘Z = f x + diff 1 x * y + diff 2 x / 2 * y²’
   >> ‘Z + diff 3 t' / &FACT 3 * y³ − Z =  diff 3 t' / &FACT 3 * y³’ by rw[REAL_ADD_SUB]
   >> POP_ORW
-  >> MP_TAC (Q.SPECL [‘diff’, ‘3’, ‘y’] TAYLOR_REMAINDER)
-  >> DISCH_TAC
-  >> POP_ASSUM (MP_TAC o qexistsl_tac [‘M’, ‘t'’])
-  >> qexistsl_tac [‘M’, ‘t’]
-  >> DISCH_THEN (Q.X_CHOOSE_TAC ‘M’ MP_TAC)
- (* >> DISCH_THEN (Q.X_CHOOSE_THEN ‘M’ (Q.X_CHOOSE_THEN ‘t'’ MP_TAC)) *)
+  >> Q.UNABBREV_TAC ‘Z’
   >> cheat
 QED
-*)
+
 
 Theorem normal_absolute_third_moment:
     ∀p X sig. normal_rv X p 0 sig ⇒
