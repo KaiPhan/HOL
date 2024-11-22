@@ -408,10 +408,20 @@ Definition absolute_third_moment_def:
     absolute_third_moment p X  = absolute_moment p X 0 3
 End
 
+Definition second_moments_def:
+  second_moments p X n = SIGMA (λi. central_moment p (X i) 2) (count1 n)
+End
+
+Definition third_moments_def:
+  third_moments p X n = SIGMA (λi. third_moment p (X i)) (count1 n)
+End
+
+
 (* ------------------------------------------------------------------------- *)
 
 Theorem TAYLOR_REMAINDER:
-    ∀(diff:num -> real -> real) n (x:real). ∃M t. abs (diff n t) ≤ M ⇒
+  ∀(diff:num -> real -> real) n (x:real). ∃M t.
+                                                abs (diff n t) ≤ M ⇒
                      abs (diff n t / (&FACT n:real) * x pow n) ≤ M / &FACT n * abs (x) pow n
 Proof
     rpt GEN_TAC
@@ -485,26 +495,24 @@ Proof
      >> STRIP_TAC
      >> ‘a ≤ t + a’ by rw[REAL_LE_ADDL]
      >> ‘t + a ≤ x’ by METIS_TAC[REAL_LE_SUB_LADD]
-     >> BETA_TAC
-     >> Know ‘(g diffl 1) t’
-     >- (Q.UNABBREV_TAC ‘g’ \\
-         Q.PAT_X_ASSUM ‘∀m t. m < n ∧ a ≤ t ∧ t ≤ x ⇒
-                                  (diff m diffl diff (SUC m) t) t’
-                                  (MP_TAC o Q.SPECL [‘0’, ‘t + a’]) \\
-         rw[diffl] \\
-         ‘diff 1 (t + a) = 1’ by cheat \\
-         ‘∀h. t + a + h = t + h + a’ by METIS_TAC[REAL_ADD_COMM, GSYM REAL_ADD_ASSOC] \\
-         FULL_SIMP_TAC std_ss [] \\
-         cheat)
-     >> DISCH_TAC
-     (* ((λx. diff m (x + a)) diffl diff (SUC m) (t + a)) t*)
      >> Q.PAT_X_ASSUM ‘∀m t. m < n ∧ a ≤ t ∧ t ≤ x ⇒
-                            (diff m diffl diff (SUC m) t) t’
-                            (MP_TAC o Q.SPECL [‘m’, ‘t + a’])
-     >> simp[diffl]
-     >> ‘∀h. t + a + h = t + h + a’ by METIS_TAC[REAL_ADD_COMM, GSYM REAL_ADD_ASSOC]
-     >> FULL_SIMP_TAC std_ss []
-     >> cheat)
+                             (diff m diffl diff (SUC m) t) t’
+       (MP_TAC o Q.SPECL [‘m’, ‘t + a’])
+     >> DISCH_TAC
+     >> MP_TAC (Q.SPECL [‘diff (m:num)’, ‘λx. (x + a)’, ‘diff (SUC m) (t + a:real)’, ‘1’, ‘t’] DIFF_CHAIN)
+     >> impl_tac
+     >- (CONJ_TAC
+         >- (BETA_TAC \\
+             METIS_TAC [])
+         (* ((λx. x + a) diffl 1) t *)
+         >> Know ‘((λx. x + a) diffl (1 + 0)) t’
+         >- (MP_TAC (Q.SPECL [‘λx. x’, ‘λx. a’, ‘1’, ‘0’, ‘t’] DIFF_ADD) \\
+             impl_tac \\
+             METIS_TAC [DIFF_X, DIFF_CONST] \\
+             BETA_TAC \\
+             simp[])
+         >> simp[REAL_ADD_RID])
+         >> simp[])
  >> simp[]
  >> DISCH_THEN (Q.X_CHOOSE_TAC ‘t’)
  >> Q.EXISTS_TAC ‘t + a’
@@ -515,49 +523,54 @@ Proof
  >> Know ‘∀m. diff' m 0 = diff m a’
     >- (Q.UNABBREV_TAC ‘diff'’ \\
         BETA_TAC \\
-        simp[] )
+        simp[])
  >> DISCH_TAC
  >> simp[]
 QED
 
 
 Theorem TAYLOR_CLT_LEMMA:
-  ∀diff (f:real -> real) x y.
-                              0 < y ∧ diff (0:num) = f ⇒
-                              ∃M t.
-                                    abs (diff (3:num) t) ≤ M ⇒
-                                    abs (f (x + y) - (f x + diff 1 x * y + diff 2 x / 2 * y pow 2)) ≤
-                                    M / 6 * abs y pow 3
+  ∀diff (f:real -> real) x y M.
+                              0 < y ∧ diff (0:num) = f ∧
+                              (∀m t.  m < 3 ∧ x ≤ t ∧ t ≤ x + y ⇒ (diff m diffl diff (SUC m) t) t) ∧
+                              M = sup {diff 3 x | x | T} ⇒
+                              abs (f (x + y) - (f x + diff 1 x * y + diff 2 x / 2 * y pow 2)) ≤
+                              M / 6 * abs y pow 3
 Proof
     rpt GEN_TAC
  >> STRIP_TAC
- >> qexistsl [‘M’, ‘t’]
- >> DISCH_TAC
  >> MP_TAC (Q.SPECL [‘f’, ‘diff’, ‘x’, ‘x + y’, ‘3’] TAYLOR_THEOREM)
- >> impl_tac
- >- (CONJ_TAC
-     (* x < x + y *)
-     >- (METIS_TAC[REAL_LT_ADDR])
-     >> rpt GEN_TAC
-      >> cheat
-    (*  >> rpt GEN_TAC
-      >> qx_genl_tac [‘m’, ‘t’] *)
-     )
-  >> DISCH_TAC
-  >> ‘x + y − x = y’ by rw[REAL_ADD_SUB]
-  >> FULL_SIMP_TAC std_ss []
-  >> Know ‘sum (0,3) (λm. diff m x / &FACT m * y pow m) =
+ >> simp[]
+ >> DISCH_THEN (Q.X_CHOOSE_THEN ‘t’ STRIP_ASSUME_TAC)
+ >> ‘x + y − x = y’ by rw[REAL_ADD_SUB]
+ >> FULL_SIMP_TAC std_ss []
+ >> Know ‘sum (0,3) (λm. diff m x / &FACT m * y pow m) =
            (f x + diff 1 x * y + diff 2 x / 2 * y²)’
-  >- (cheat
-     (*MP_TAC (Q.SPECL [‘0’, ‘2’, ‘diff’] sum) *)
-      )
-  >> DISCH_TAC
-  >> FULL_SIMP_TAC std_ss []
-  >> Q.ABBREV_TAC ‘Z = f x + diff 1 x * y + diff 2 x / 2 * y²’
-  >> ‘Z + diff 3 t' / &FACT 3 * y³ − Z =  diff 3 t' / &FACT 3 * y³’ by rw[REAL_ADD_SUB]
-  >> POP_ORW
-  >> Q.UNABBREV_TAC ‘Z’
-  >> cheat
+ >- (EVAL_TAC \\
+     simp[])
+ >> fs[]
+ >> DISCH_TAC
+ >> Q.ABBREV_TAC ‘Z = f x + diff 1 x * y + diff 2 x / 2 * y²’
+ >> fs[]
+ >> ‘Z + y³ * (&FACT 3)⁻¹ * diff 3 t − Z =   y³ * (&FACT 3)⁻¹ * diff 3 t’ by rw[REAL_ADD_SUB]
+ >> POP_ORW
+ >> Q.UNABBREV_TAC ‘Z’
+ >> ‘inv(&FACT 3) = (inv(6):real)’ by EVAL_TAC
+ >> POP_ORW
+ >> simp[]
+ >> ‘abs (1 / 6 * (y³ * diff 3 t)) = abs (1/6) * abs (y³ * diff 3 t)’ by rw[ABS_MUL]
+ >> POP_ORW
+ >> ‘6 * (abs (1 / 6) * abs (y³ * diff 3 t)) = abs (y³ * diff 3 t)’
+     by rw[GSYM REAL_MUL_ASSOC, ABS_REFL, REAL_MUL_RINV, REAL_MUL_RID]
+ >> POP_ORW
+ >> ‘abs (y³ * diff 3 t) = abs (y³) * abs (diff 3 t)’ by rw[ABS_MUL]
+ >> POP_ORW
+ >> ‘abs (y pow 3) = abs y pow 3’ by METIS_TAC[POW_ABS]
+ >> POP_ORW
+ >> MATCH_MP_TAC REAL_LE_LMUL1
+ >> CONJ_TAC
+ >- (METIS_TAC[ABS_POS, POW_POS])
+ >> cheat
 QED
 
 
@@ -573,13 +586,36 @@ Definition BigO_def:
                                 abs (f x) ≤ M * abs (g x)
 End
 
-Definition second_moments_def:
-    second_moments p X n = SIGMA (λi. central_moment p (X i) 2) (count1 n)
+Definition convolution_def:
+  convolution m f g (t:extreal) = integral m (λτ. f τ * g (t - τ))
 End
 
-Definition third_moments_def:
-    third_moments p X n = SIGMA (λi. third_moment p (X i)) (count1 n)
-End
+Theorem convolution_of_sum:
+  ∀p X Y Z f g h z muX sigX muY sigY.
+                                      normal_rv X p muX sigX ∧
+                                      normal_rv Y p muY sigY ∧
+                                      indep_vars p X Y Borel Borel ∧
+                                      f = distribution_function p X  ∧
+                                      g = distribution_function p Y  ∧
+                                      h = distribution_function p Z ∧
+                                      Z = (λx. X x + Y x) ⇒
+                                      ∀z. h z = convolution p f g z
+Proof
+    rpt STRIP_TAC
+ >> rw[convolution_def]
+ >> cheat
+QED
+
+Theorem normal_rv_sum:
+  ∀p X Y muX sigX muY sigY Z. normal_rv X p muX sigX ∧
+                              normal_rv Y p muY sigY ∧
+                              indep_vars p X Y Borel Borel ∧
+                              Z = (λx. X x + Y x) ⇒
+                              normal_rv Z p (muX + muY) (sigX + sigY)
+Proof
+    cheat
+QED
+
 
 Theorem central_limit:
   ∀p X Y N s b. prob_space p ∧
@@ -595,8 +631,8 @@ Theorem central_limit:
                (∀i. third_moment p (X i) < PosInf) ∧
                (∀n. s n = sqrt (second_moments p X n)) ∧
                (∀n. b n = third_moments p X n) ∧
-               ((\n. b n / (s n pow 3)) --> 0) sequentially
-            ⇒  ((\n x. (SIGMA (λi. X i x) (count1 n)) / s n) --> N) (in_distribution p)
+               ((\n. b n / (s n pow 3)) --> 0) sequentially ⇒
+               ((\n x. (SIGMA (λi. X i x) (count1 n)) / s n) --> N) (in_distribution p)
 Proof
      rpt STRIP_TAC
   >> Q.ABBREV_TAC ‘Z = λn x. ∑ (λi. X i x) (count1 n) / s n’
@@ -610,15 +646,16 @@ Proof
                              Borel_measurable (p_space p,events p)’
              >- (MATCH_MP_TAC (INST_TYPE [beta |-> “:num”] IN_MEASURABLE_BOREL_SUM') \\
                  simp[] \\
-                (* qexistsl_tac [‘X’, ‘count1 i’] \\*)
+                 qexistsl_tac [‘X’, ‘count1 i’] \\
+                 simp[] \\
                  cheat)
              >> DISCH_TAC
-             >> Know ‘(λn x. SIGMA (λi. X i x) (count1 n) / s n) =
-                       λn x. Normal 1 / s n * SIGMA (λi. X i x) (count1 n)’
+           (*  >> Know ‘(λn x. SIGMA (λi. X i x) (count1 n) / s n) =
+                       λn x. Normal inv(s n) * SIGMA (λi. X i x) (count1 n)’
              >- (cheat)
              >> DISCH_TAC
              >> ASM_REWRITE_TAC []
-             >> MATCH_MP_TAC IN_MEASURABLE_BOREL_CMUL
+             >> MATCH_MP_TAC IN_MEASURABLE_BOREL_CMUL *)
              >> cheat)
          (*∀x. x ∈ p_space p ⇒ Z i x ≠ −∞ ∧ Z i x ≠ +∞*)
          >> GEN_TAC
