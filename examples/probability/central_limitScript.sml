@@ -647,15 +647,15 @@ Proof
              >- (MATCH_MP_TAC (INST_TYPE [beta |-> “:num”] IN_MEASURABLE_BOREL_SUM') \\
                  simp[] \\
                  qexistsl_tac [‘X’, ‘count1 i’] \\
-                 simp[] \\
-                 cheat)
+                 simp [] \\
+                 FULL_SIMP_TAC std_ss [PROB_SPACE])
              >> DISCH_TAC
-           (*  >> Know ‘(λn x. SIGMA (λi. X i x) (count1 n) / s n) =
-                       λn x. Normal inv(s n) * SIGMA (λi. X i x) (count1 n)’
+             >> Know ‘∀x. ∑ (λi. X i x) (count1 i) / sqrt (second_moments p X i) =
+                          inv(sqrt (second_moments p X i)) *  ∑ (λi. X i x) (count1 i)’ 
              >- (cheat)
              >> DISCH_TAC
              >> ASM_REWRITE_TAC []
-             >> MATCH_MP_TAC IN_MEASURABLE_BOREL_CMUL *)
+             >> MATCH_MP_TAC IN_MEASURABLE_BOREL_CMUL
              >> cheat)
          (*∀x. x ∈ p_space p ⇒ Z i x ≠ −∞ ∧ Z i x ≠ +∞*)
          >> GEN_TAC
