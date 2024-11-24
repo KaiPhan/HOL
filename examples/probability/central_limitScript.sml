@@ -616,7 +616,14 @@ Proof
   >> simp[]
 QED
 
-(*
+Theorem real_random_variable_sum_cmul:
+  ∀p X J r.
+    prob_space p ∧ FINITE J ∧ (∀i. i ∈ J ⇒ real_random_variable (X i) p) ⇒
+    real_random_variable (λx. Normal r * ∑ (λn. X n x) J) p
+Proof
+  rw [real_random_variable_cmul, real_random_variable_sum]
+QED
+
 Theorem central_limit:
   ∀p X Y N s b. prob_space p ∧
                 normal_rv N p 0 1 ∧
@@ -638,65 +645,54 @@ Proof
   >> Q.ABBREV_TAC ‘Z = λn x. ∑ (λi. X i x) (count1 n) / s n’
   >> fs[normal_rv_def]
   >> Know ‘∀i. real_random_variable (Z i) p’
-     >- (fs[real_random_variable]
-         >> GEN_TAC
-         >> CONJ_TAC
-
-         (* Z i ∈ Borel_measurable (p_space p,events p) *)
-         >- (Q.UNABBREV_TAC ‘Z’
-             >> Know ‘(λn x. SIGMA (λi. X i x) (count1 n)) i ∈
-                             Borel_measurable (p_space p,events p)’
-             >- (MATCH_MP_TAC (INST_TYPE [beta |-> “:num”] IN_MEASURABLE_BOREL_SUM') \\
-                 simp[] \\
-                 qexistsl_tac [‘X’, ‘count1 i’] \\
-                 simp [] \\
-                 FULL_SIMP_TAC std_ss [PROB_SPACE])
-             >> DISCH_TAC
-             >> simp[]
-             >> Q.ABBREV_TAC ‘C = sqrt (second_moments p X i)’
-             >> Know ‘0 < C’
-             >- (Q.UNABBREV_TAC ‘C’ \\
-                 MATCH_MP_TAC sqrt_pos_lt \\
-                 rw[second_moments_def] \\
-                 (* 0 < ∑ (λi. central_moment p (X i) 2) (count1 i) *)
-                 Q.ABBREV_TAC ‘G = λi. central_moment p (X i) 2’ \\
-                 MATCH_MP_TAC (INST_TYPE [alpha |-> “:num”] EXTREAL_SUM_IMAGE_SPOS) \\
-                 simp[] \\
-                 (* ∀x. x < SUC i ⇒ 0 < G x *)
-                 rw[Abbr ‘G’, central_moment_def, moment_def] \\
-                 cheat)
-             >> DISCH_TAC
-
-             >> ‘inv(C) ≠ NegInf’ by cheat
-             >> ‘inv(C) ≠ PosInf’ by cheat
-             >> Q.ABBREV_TAC ‘E = λx. ∑ (λi. X i x) (count1 i)’
-             >> Know ‘∀x. ∑ (λi. X i x) (count1 i) / C =
-                          inv(C) *  ∑ (λi. X i x) (count1 i)’
-             >- (cheat)
-             >> DISCH_TAC
-             >> ASM_REWRITE_TAC []
-
-             >> ‘∃D. Normal D = inv(C)’ by METIS_TAC[extreal_cases]
-             >> ‘(\x. C⁻¹ * ∑ (λi. X i x) (count1 i)) =
-                 (λx. Normal D * ∑ (λi. X i x) (count1 i))’ by rw[]
-             >> Know ‘(λx. Normal D * ∑ (λi. X i x) (count1 i)) ∈
-                      Borel_measurable (p_space p,events p)’
-             >- (MATCH_MP_TAC (INST_TYPE [beta |-> “:num”] IN_MEASURABLE_BOREL_SUM_CMUL) \\
-                 simp[] \\
-                 qexistsl_tac [‘X’, ‘count1 i’, ‘D’] \\
-                 FULL_SIMP_TAC std_ss [PROB_SPACE] \\
-                 simp[])
-             >> DISCH_TAC
-             >> rw[IN_MEASURABLE_BOREL_EQ]
-         (*∀x. x ∈ p_space p ⇒ Z i x ≠ −∞ ∧ Z i x ≠ +∞*)
-         >> GEN_TAC
-         >> DISCH_TAC
-         >> cheat)
+     >- (rw[Abbr ‘Z’]
+     >> Q.ABBREV_TAC ‘C = sqrt (second_moments p X i)’
+     >> Cases_on ‘C = 0’
+     >- (rw[Abbr ‘C’] \\
+         cheat)
+     >> Know ‘0 ≤ C’
+        >- (Q.UNABBREV_TAC ‘C’ \\
+            MATCH_MP_TAC sqrt_pos_le \\
+            rw[second_moments_def] \\
+            (* 0 < ∑ (λi. central_moment p (X i) 2) (count1 i) *)
+            Q.ABBREV_TAC ‘G = λi. central_moment p (X i) 2’ \\
+            MATCH_MP_TAC (INST_TYPE [alpha |-> “:num”] EXTREAL_SUM_IMAGE_POS) \\
+            simp[] \\
+            (* ∀x. x < SUC i ⇒ 0 < G x *)
+            rw[Abbr ‘G’, central_moment_def]\\
+            ‘moment p (X x) 0 2 = second_moment p (X x) 0’ by EVAL_TAC \\
+            simp[] \\
+            MP_TAC (Q.SPECL [‘p’, ‘X (x:num)’, ‘0’]
+                    second_moment_pos) \\
+            simp[] \\
+            DISCH_TAC)
+      >> DISCH_TAC
+      >> ‘0 < C’ by rw[lt_le]
+      >> ‘inv(C) ≠ NegInf ∧ inv(C) ≠ PosInf’ by METIS_TAC[inv_not_infty]
+      >> ‘∃r. Normal r = inv(C)’ by METIS_TAC[extreal_cases]
+      >> Q.ABBREV_TAC ‘D = λx. ∑ (λi. X i x) (count1 i)’
+      >> ‘∀x. D x = ∑ (λi. X i x) (count1 i)’ by rw[Abbr ‘D’]
+      >> Know ‘∀x. D x ≠ NegInf’
+         >- (rw[Abbr ‘D’] \\
+             MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_NEGINF \\
+             cheat)
+      >> DISCH_TAC
+      >> Know ‘∀x. D x ≠ PosInf’
+         >- (rw[Abbr ‘D’] \\
+             MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_POSINF \\
+             cheat)
+      >> DISCH_TAC
+      >> ‘∀x. D x / C = Normal r * D x’ by METIS_TAC[div_eq_mul_linv]
+      >> rw[Abbr ‘D’]
+      >> FULL_SIMP_TAC std_ss [] (* unexpected return *)
+      >> ‘∀x. real_random_variable (λx. Normal r * ∑ (λi. X i x) (count1 i)) p’ by
+              rw[real_random_variable_sum_cmul]
+      >> cheat)
   >> DISCH_TAC
   >> rw [converge_in_dist_alt']
   >> cheat
 QED
-*)
+
 
 (* ------------------------------------------------------------------------- *)
 (*  Moment generating function                                               *)
