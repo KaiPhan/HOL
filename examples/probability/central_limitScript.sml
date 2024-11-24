@@ -586,37 +586,37 @@ Definition BigO_def:
                                 abs (f x) ≤ M * abs (g x)
 End
 
-Definition convolution_def:
-  convolution m f g (t:extreal) = integral m (λτ. f τ * g (t - τ))
-End
-
-Theorem convolution_of_sum:
-  ∀p X Y Z f g h z muX sigX muY sigY.
-                                      normal_rv X p muX sigX ∧
-                                      normal_rv Y p muY sigY ∧
-                                      indep_vars p X Y Borel Borel ∧
-                                      f = distribution_function p X  ∧
-                                      g = distribution_function p Y  ∧
-                                      h = distribution_function p Z ∧
-                                      Z = (λx. X x + Y x) ⇒
-                                      ∀z. h z = convolution p f g z
+Theorem IN_MEASURABLE_BOREL_SUM_CMUL:
+    ∀a f g s z.
+               FINITE s ∧ sigma_algebra a ∧ (∀i. i ∈ s ⇒ f i ∈ Borel_measurable a) ∧
+               (∀x. x ∈ space a ⇒ g x = Normal z * ∑ (λi. f i x) s) ⇒
+               g ∈ Borel_measurable a
 Proof
-    rpt STRIP_TAC
- >> rw[convolution_def]
- >> cheat
+  RW_TAC std_ss []
+  >> Cases_on `Normal z = 0`
+  >- METIS_TAC [IN_MEASURABLE_BOREL_CONST, mul_lzero]
+  >> Q.ABBREV_TAC ‘h = λx. ∑ (λi. (f: β -> α -> extreal) i x) s’
+  >> ‘∀x. h x = ∑ (λi. f i x) s’ by rw[Abbr ‘h’]
+  >> MP_TAC (Q.SPECL [‘a’, ‘(f: 'b -> 'a -> extreal)’, ‘h’, ‘s’]
+                      IN_MEASURABLE_BOREL_SUM')
+  >> impl_tac
+  >- (METIS_TAC[])
+  >> DISCH_TAC
+  >> MP_TAC (Q.SPECL [‘a’, ‘h’, ‘λx. Normal z * h x’, ‘z’]
+              IN_MEASURABLE_BOREL_CMUL)
+  >> impl_tac
+  >- (METIS_TAC[])
+  >> ‘!x. x IN space a ==> (Normal z * h x = g x)’ by rw [Abbr ‘h’]
+  >> DISCH_TAC
+  >> MP_TAC (Q.SPECL [‘a’, ‘g’, ‘λx. Normal z * h x’]
+              IN_MEASURABLE_BOREL_EQ')
+  >> impl_tac
+  >> BETA_TAC
+  >- (METIS_TAC[])
+  >> simp[]
 QED
 
-Theorem normal_rv_sum:
-  ∀p X Y muX sigX muY sigY Z. normal_rv X p muX sigX ∧
-                              normal_rv Y p muY sigY ∧
-                              indep_vars p X Y Borel Borel ∧
-                              Z = (λx. X x + Y x) ⇒
-                              normal_rv Z p (muX + muY) (sigX + sigY)
-Proof
-    cheat
-QED
-
-
+(*
 Theorem central_limit:
   ∀p X Y N s b. prob_space p ∧
                 normal_rv N p 0 1 ∧
@@ -641,6 +641,8 @@ Proof
      >- (fs[real_random_variable]
          >> GEN_TAC
          >> CONJ_TAC
+
+         (* Z i ∈ Borel_measurable (p_space p,events p) *)
          >- (Q.UNABBREV_TAC ‘Z’
              >> Know ‘(λn x. SIGMA (λi. X i x) (count1 n)) i ∈
                              Borel_measurable (p_space p,events p)’
@@ -650,13 +652,42 @@ Proof
                  simp [] \\
                  FULL_SIMP_TAC std_ss [PROB_SPACE])
              >> DISCH_TAC
-             >> Know ‘∀x. ∑ (λi. X i x) (count1 i) / sqrt (second_moments p X i) =
-                          inv(sqrt (second_moments p X i)) *  ∑ (λi. X i x) (count1 i)’ 
+             >> simp[]
+             >> Q.ABBREV_TAC ‘C = sqrt (second_moments p X i)’
+             >> Know ‘0 < C’
+             >- (Q.UNABBREV_TAC ‘C’ \\
+                 MATCH_MP_TAC sqrt_pos_lt \\
+                 rw[second_moments_def] \\
+                 (* 0 < ∑ (λi. central_moment p (X i) 2) (count1 i) *)
+                 Q.ABBREV_TAC ‘G = λi. central_moment p (X i) 2’ \\
+                 MATCH_MP_TAC (INST_TYPE [alpha |-> “:num”] EXTREAL_SUM_IMAGE_SPOS) \\
+                 simp[] \\
+                 (* ∀x. x < SUC i ⇒ 0 < G x *)
+                 rw[Abbr ‘G’, central_moment_def, moment_def] \\
+                 cheat)
+             >> DISCH_TAC
+
+             >> ‘inv(C) ≠ NegInf’ by cheat
+             >> ‘inv(C) ≠ PosInf’ by cheat
+             >> Q.ABBREV_TAC ‘E = λx. ∑ (λi. X i x) (count1 i)’
+             >> Know ‘∀x. ∑ (λi. X i x) (count1 i) / C =
+                          inv(C) *  ∑ (λi. X i x) (count1 i)’
              >- (cheat)
              >> DISCH_TAC
              >> ASM_REWRITE_TAC []
-             >> MATCH_MP_TAC IN_MEASURABLE_BOREL_CMUL
-             >> cheat)
+
+             >> ‘∃D. Normal D = inv(C)’ by METIS_TAC[extreal_cases]
+             >> ‘(\x. C⁻¹ * ∑ (λi. X i x) (count1 i)) =
+                 (λx. Normal D * ∑ (λi. X i x) (count1 i))’ by rw[]
+             >> Know ‘(λx. Normal D * ∑ (λi. X i x) (count1 i)) ∈
+                      Borel_measurable (p_space p,events p)’
+             >- (MATCH_MP_TAC (INST_TYPE [beta |-> “:num”] IN_MEASURABLE_BOREL_SUM_CMUL) \\
+                 simp[] \\
+                 qexistsl_tac [‘X’, ‘count1 i’, ‘D’] \\
+                 FULL_SIMP_TAC std_ss [PROB_SPACE] \\
+                 simp[])
+             >> DISCH_TAC
+             >> rw[IN_MEASURABLE_BOREL_EQ]
          (*∀x. x ∈ p_space p ⇒ Z i x ≠ −∞ ∧ Z i x ≠ +∞*)
          >> GEN_TAC
          >> DISCH_TAC
@@ -665,6 +696,7 @@ Proof
   >> rw [converge_in_dist_alt']
   >> cheat
 QED
+*)
 
 (* ------------------------------------------------------------------------- *)
 (*  Moment generating function                                               *)
