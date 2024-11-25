@@ -573,7 +573,6 @@ Proof
  >> cheat
 QED
 
-
 Theorem normal_absolute_third_moment:
     ∀p X sig. normal_rv X p 0 sig ⇒
               absolute_third_moment p X = sqrt (8 / π)  *  variance p X  * sqrt (variance p X)
@@ -614,14 +613,6 @@ Proof
   >> BETA_TAC
   >- (METIS_TAC[])
   >> simp[]
-QED
-
-Theorem real_random_variable_sum_cmul:
-  ∀p X J r.
-    prob_space p ∧ FINITE J ∧ (∀i. i ∈ J ⇒ real_random_variable (X i) p) ⇒
-    real_random_variable (λx. Normal r * ∑ (λn. X n x) J) p
-Proof
-  rw [real_random_variable_cmul, real_random_variable_sum]
 QED
 
 Theorem central_limit:
@@ -670,23 +661,32 @@ Proof
       >> ‘0 < C’ by rw[lt_le]
       >> ‘inv(C) ≠ NegInf ∧ inv(C) ≠ PosInf’ by METIS_TAC[inv_not_infty]
       >> ‘∃r. Normal r = inv(C)’ by METIS_TAC[extreal_cases]
-      >> Q.ABBREV_TAC ‘D = λx. ∑ (λi. X i x) (count1 i)’
-      >> ‘∀x. D x = ∑ (λi. X i x) (count1 i)’ by rw[Abbr ‘D’]
-      >> Know ‘∀x. D x ≠ NegInf’
+      >> Q.ABBREV_TAC ‘D = ∑ (λi. X i x) (count1 i)’
+      >> Know ‘D ≠ NegInf’
          >- (rw[Abbr ‘D’] \\
              MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_NEGINF \\
+             CONJ_TAC >- REWRITE_TAC [FINITE_COUNT] \\
+             GEN_TAC \\
+             FULL_SIMP_TAC std_ss [real_random_variable_def]\\
+             Q.PAT_X_ASSUM ‘ ∀i'.
+                                  random_variable (X i') p Borel ∧
+                                  ∀x. x ∈ p_space p ⇒ X i' x ≠ −∞ ∧ X i' x ≠ +∞’
+                 (MP_TAC o Q.SPEC ‘x'’) \\
+             STRIP_TAC \\
+             POP_ASSUM (MP_TAC o Q.SPEC ‘x’) \\
+             STRIP_TAC \\
              cheat)
       >> DISCH_TAC
-      >> Know ‘∀x. D x ≠ PosInf’
+      >> Know ‘D ≠ PosInf’
          >- (rw[Abbr ‘D’] \\
              MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_POSINF \\
              cheat)
       >> DISCH_TAC
-      >> ‘∀x. D x / C = Normal r * D x’ by METIS_TAC[div_eq_mul_linv]
+      >> ‘D / C = Normal r * D’ by METIS_TAC[div_eq_mul_linv]
       >> rw[Abbr ‘D’]
       >> FULL_SIMP_TAC std_ss [] (* unexpected return *)
       >> ‘∀x. real_random_variable (λx. Normal r * ∑ (λi. X i x) (count1 i)) p’ by
-              rw[real_random_variable_sum_cmul]
+         rw [real_random_variable_cmul, real_random_variable_sum]
       >> cheat)
   >> DISCH_TAC
   >> rw [converge_in_dist_alt']
