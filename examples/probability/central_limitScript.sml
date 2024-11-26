@@ -533,7 +533,8 @@ Theorem TAYLOR_CLT_LEMMA:
   ∀diff (f:real -> real) x y M.
                               0 < y ∧ diff (0:num) = f ∧
                               (∀m t.  m < 3 ∧ x ≤ t ∧ t ≤ x + y ⇒ (diff m diffl diff (SUC m) t) t) ∧
-                              M = sup {diff 3 x | x | T} ⇒
+                              (∃z. ∀x. x IN {abs (diff 3 x) | x | T} ⇒ abs (diff 3 x) ≤ z) ∧
+                              M = sup {abs (diff 3 x) | x | T} ⇒
                               abs (f (x + y) - (f x + diff 1 x * y + diff 2 x / 2 * y pow 2)) ≤
                               M / 6 * abs y pow 3
 Proof
@@ -570,6 +571,8 @@ Proof
  >> MATCH_MP_TAC REAL_LE_LMUL1
  >> CONJ_TAC
  >- (METIS_TAC[ABS_POS, POW_POS])
+ >> Suff ‘∀y. (λy. y IN {abs (diff 3 x) | x | T}) y ⇒ y ≤ sup {abs (diff 3 x) | x | T}’
+ >- cheat
  >> cheat
 QED
 
@@ -579,11 +582,6 @@ Theorem normal_absolute_third_moment:
 Proof
     cheat
 QED
-
-Definition BigO_def:
-  BigO f g ⇔ ∃(M:real) x0. ∀x. x0 ≤ (x:real) ⇒
-                                abs (f x) ≤ M * abs (g x)
-End
 
 Theorem IN_MEASURABLE_BOREL_SUM_CMUL:
     ∀a f g s z.
@@ -614,6 +612,11 @@ Proof
   >- (METIS_TAC[])
   >> simp[]
 QED
+
+Definition BigO_def:
+  BigO f g ⇔ ∃(M:real) x0. ∀x. x0 ≤ (x:real) ⇒
+                               abs (f x) ≤ M * abs (g x)
+End
 
 Theorem central_limit:
   ∀p X Y N s b. prob_space p ∧
@@ -661,12 +664,15 @@ Proof
       >> ‘0 < C’ by rw[lt_le]
       >> ‘inv(C) ≠ NegInf ∧ inv(C) ≠ PosInf’ by METIS_TAC[inv_not_infty]
       >> ‘∃r. Normal r = inv(C)’ by METIS_TAC[extreal_cases]
-      >> Q.ABBREV_TAC ‘D = ∑ (λi. X i x) (count1 i)’
-      >> Know ‘D ≠ NegInf’
+
+
+      >> Q.ABBREV_TAC ‘D = λx. ∑ (λi. X i x) (count1 i)’
+      >> ‘∀x. D x = ∑ (λi. X i x) (count1 i)’ by rw[Abbr ‘D’]
+      >> Know ‘∀x. D x ≠ NegInf’
          >- (rw[Abbr ‘D’] \\
              MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_NEGINF \\
              CONJ_TAC >- REWRITE_TAC [FINITE_COUNT] \\
-             GEN_TAC \\
+             Q.X_GEN_TAC ‘x'’ \\
              FULL_SIMP_TAC std_ss [real_random_variable_def]\\
              Q.PAT_X_ASSUM ‘ ∀i'.
                                   random_variable (X i') p Borel ∧
@@ -677,17 +683,31 @@ Proof
              STRIP_TAC \\
              cheat)
       >> DISCH_TAC
-      >> Know ‘D ≠ PosInf’
+      >> Know ‘∀x. D x ≠ PosInf’
          >- (rw[Abbr ‘D’] \\
              MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_POSINF \\
              cheat)
       >> DISCH_TAC
-      >> ‘D / C = Normal r * D’ by METIS_TAC[div_eq_mul_linv]
+
+      >> ‘∀x. D x / C = inv(C) * D x’ by METIS_TAC[div_eq_mul_linv]
+      >> ‘∀x. D x / C = Normal r * D x’ by METIS_TAC[div_eq_mul_linv]
       >> rw[Abbr ‘D’]
+
+      (*   ASM_REWRITE_TAC [] *)
       >> FULL_SIMP_TAC std_ss [] (* unexpected return *)
+
       >> ‘∀x. real_random_variable (λx. Normal r * ∑ (λi. X i x) (count1 i)) p’ by
-         rw [real_random_variable_cmul, real_random_variable_sum]
-      >> cheat)
+          rw [real_random_variable_cmul, real_random_variable_sum]
+      >> Know ‘∀x. x IN p_space p ==> inv(C) * ∑ (λi. X i x) (count1 i) = Normal r * ∑ (λi. X i x) (count1 i)’
+         >- (X_GEN_TAC “x” \\
+             DISCH_TAC \\
+             METIS_TAC[])
+      >> DISCH_TAC
+      >> MP_TAC (Q.SPECL [‘p’, ‘λx. inv(C) * ∑ (λi. X i x) (count1 i)’, ‘λx. Normal r * ∑ (λi. X i x) (count1 i)’]
+                 real_random_variable_cong)
+      >> impl_tac
+      >> METIS_TAC[]
+      >> METIS_TAC[])
   >> DISCH_TAC
   >> rw [converge_in_dist_alt']
   >> cheat
