@@ -618,6 +618,55 @@ Definition BigO_def:
                                abs (f x) ≤ M * abs (g x)
 End
 
+Theorem BigO_PROD:
+  ∀f1 g1 f2 g2. BigO f1 g1 ∧
+                BigO f2 g2 ⇒ BigO (λx. f1 x * f2 x) (λx. g1 x * g2 x)
+Proof
+  rpt STRIP_TAC
+  >> FULL_SIMP_TAC std_ss [BigO_def, o_DEF]
+  >> qexistsl [‘M * M'’, ‘max x0 x0'’]
+  >> rw[REAL_MAX_LE]
+  >> ‘∀x. 0 ≤ abs (f1 x)’ by rw[ABS_POS]
+  >> ‘∀x. 0 ≤ abs (f2 x)’ by rw[ABS_POS]
+  >> ‘abs (f1 x) ≤ M * abs (g1 x)’ by METIS_TAC []
+  >> ‘abs (f2 x) ≤ M' * abs (g2 x)’ by METIS_TAC []
+  >> Know ‘abs (f1 x) * abs (f2 x) ≤ M * abs (g1 x) * (M' * abs (g2 x))’
+  >- (MATCH_MP_TAC REAL_LE_MUL2 \\
+      METIS_TAC[])
+  >> ‘abs (f1 x) * abs (f2 x) = abs (f1 x * f2 x)’ by rw[GSYM ABS_MUL]
+  >> ‘M * abs (g1 x) * (M' * abs (g2 x)) = M * M' * abs (g1 x * g2 x)’
+      by rw[REAL_MUL_ASSOC, REAL_MUL_COMM, GSYM ABS_MUL]
+  >> rw [REAL_LT_IMP_LE]
+QED
+
+  (*
+Theorem BigO_PROD_ALT:
+  ∀f g. BigO
+Proof
+  cheat
+QED
+  *)
+
+Theorem BigO_SUM:
+  ∀f1 f2 g1 g2. BigO f1 g1 ∧ BigO f2 g2 ⇒
+                BigO (λx. f1 x + f2 x) (λx. max (g1 x) (g2 x))
+Proof
+  rpt STRIP_TAC
+  >> FULL_SIMP_TAC std_ss [BigO_def, o_DEF]
+  >> qexistsl [‘M * M'’, ‘max x0 x0'’]
+  >> rw[REAL_MAX_LE]
+  >> ‘∀x. 0 ≤ abs (f1 x)’ by rw[ABS_POS]
+  >> ‘∀x. 0 ≤ abs (f2 x)’ by rw[ABS_POS]
+  >> ‘abs (f1 x) ≤ M * abs (g1 x)’ by METIS_TAC []
+  >> ‘abs (f2 x) ≤ M' * abs (g2 x)’ by METIS_TAC []
+  >> Know ‘abs (f1 x) + abs (f2 x) ≤ M * abs (g1 x) + (M' * abs (g2 x))’
+  >- (MATCH_MP_TAC REAL_LE_ADD2 \\
+      METIS_TAC[])
+  >> ‘abs (f1 x + f2 x) ≤ abs (f1 x) + abs (f2 x)’ by rw[ABS_TRIANGLE]
+  >> cheat
+QED
+
+
 Theorem central_limit:
   ∀p X Y N s b. prob_space p ∧
                 normal_rv N p 0 1 ∧
