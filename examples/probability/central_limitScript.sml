@@ -614,56 +614,103 @@ Proof
 QED
 
 Definition BigO_def:
-  BigO f g ⇔ ∃(M:real) x0. ∀x. x0 ≤ (x:real) ⇒
-                               abs (f x) ≤ M * abs (g x)
+  BigO f g ⇔ ∃(c:real) (n0:num). 0 < c ⇒
+                                  ∀(n:num). n0 ≤ n ⇒
+                                            abs (f n) ≤ c * abs (g n)
+End
+
+Definition BigO_def':
+  BigO' f g ⇔ ∃(c:real) (x0:real). 0 ≤ c ⇒
+                                    ∀(x:real). x0 ≤ (x:real) ⇒
+                                    abs (f x) ≤ c * abs (g x)
 End
 
 Theorem BigO_PROD:
   ∀f1 g1 f2 g2. BigO f1 g1 ∧
-                BigO f2 g2 ⇒ BigO (λx. f1 x * f2 x) (λx. g1 x * g2 x)
+                BigO f2 g2 ⇒ BigO (λn. f1 n * f2 n) (λn. g1 n * g2 n)
 Proof
   rpt STRIP_TAC
-  >> FULL_SIMP_TAC std_ss [BigO_def, o_DEF]
-  >> qexistsl [‘M * M'’, ‘max x0 x0'’]
+  >> FULL_SIMP_TAC std_ss [BigO_def]
+  >> qexistsl_tac [‘c * c'’, ‘MAX n0 n0'’]
   >> rw[REAL_MAX_LE]
-  >> ‘∀x. 0 ≤ abs (f1 x)’ by rw[ABS_POS]
-  >> ‘∀x. 0 ≤ abs (f2 x)’ by rw[ABS_POS]
-  >> ‘abs (f1 x) ≤ M * abs (g1 x)’ by METIS_TAC []
-  >> ‘abs (f2 x) ≤ M' * abs (g2 x)’ by METIS_TAC []
-  >> Know ‘abs (f1 x) * abs (f2 x) ≤ M * abs (g1 x) * (M' * abs (g2 x))’
+  >> Know ‘0 < c ∧ 0 < c'’
+  >- (SPOSE_NOT_THEN STRIP_ASSUME_TAC \\
+      FULL_SIMP_TAC std_ss [] \\
+      cheat)
+  >> STRIP_TAC
+  >> FULL_SIMP_TAC std_ss []
+  >> Q.PAT_X_ASSUM ‘∀n. n0 ≤ n ⇒ abs (f1 n) ≤ c * abs (g1 n)’
+      (MP_TAC o Q.SPEC ‘n’)
+  >> rw[]
+  >> Q.PAT_X_ASSUM ‘∀n. n0' ≤ n ⇒ abs (f2 n) ≤ c' * abs (g2 n)’
+      (MP_TAC o Q.SPEC ‘n’)
+  >> rw[]
+  >> Know ‘abs (f1 n) * abs (f2 n) ≤ c * abs (g1 n) * (c' * abs (g2 n))’
   >- (MATCH_MP_TAC REAL_LE_MUL2 \\
-      METIS_TAC[])
-  >> ‘abs (f1 x) * abs (f2 x) = abs (f1 x * f2 x)’ by rw[GSYM ABS_MUL]
-  >> ‘M * abs (g1 x) * (M' * abs (g2 x)) = M * M' * abs (g1 x * g2 x)’
+      simp[])
+  >> DISCH_TAC
+  >> ‘abs (f1 n) * abs (f2 n) = abs (f1 n * f2 n)’ by rw[GSYM ABS_MUL]
+  >> ‘c * abs (g1 n) * (c' * abs (g2 n)) = c * c' * abs (g1 n * g2 n)’
       by rw[REAL_MUL_ASSOC, REAL_MUL_COMM, GSYM ABS_MUL]
-  >> rw [REAL_LT_IMP_LE]
+  >> FULL_SIMP_TAC std_ss []
 QED
-
-  (*
-Theorem BigO_PROD_ALT:
-  ∀f g. BigO
-Proof
-  cheat
-QED
-  *)
 
 Theorem BigO_SUM:
   ∀f1 f2 g1 g2. BigO f1 g1 ∧ BigO f2 g2 ⇒
-                BigO (λx. f1 x + f2 x) (λx. max (g1 x) (g2 x))
+                BigO (λn. f1 n + f2 n) (λn. abs (g1 n) + abs (g2 n))
 Proof
   rpt STRIP_TAC
-  >> FULL_SIMP_TAC std_ss [BigO_def, o_DEF]
-  >> qexistsl [‘M * M'’, ‘max x0 x0'’]
-  >> rw[REAL_MAX_LE]
-  >> ‘∀x. 0 ≤ abs (f1 x)’ by rw[ABS_POS]
-  >> ‘∀x. 0 ≤ abs (f2 x)’ by rw[ABS_POS]
-  >> ‘abs (f1 x) ≤ M * abs (g1 x)’ by METIS_TAC []
-  >> ‘abs (f2 x) ≤ M' * abs (g2 x)’ by METIS_TAC []
-  >> Know ‘abs (f1 x) + abs (f2 x) ≤ M * abs (g1 x) + (M' * abs (g2 x))’
-  >- (MATCH_MP_TAC REAL_LE_ADD2 \\
-      METIS_TAC[])
-  >> ‘abs (f1 x + f2 x) ≤ abs (f1 x) + abs (f2 x)’ by rw[ABS_TRIANGLE]
-  >> cheat
+  >> FULL_SIMP_TAC std_ss [BigO_def]
+  >> qexistsl_tac [‘max c c'’, ‘MAX n0 n0'’]
+  >> rw[]
+  >> ‘0 < c ∧ 0 < c'’ by cheat
+  >> FULL_SIMP_TAC std_ss []
+  >> Q.PAT_X_ASSUM ‘∀n. n0 ≤ n ⇒ abs (f1 n) ≤ c * abs (g1 n)’
+      (MP_TAC o Q.SPEC ‘n’)
+  >> rw[]
+  >> Q.PAT_X_ASSUM ‘∀n. n0' ≤ n ⇒ abs (f2 n) ≤ c' * abs (g2 n)’
+      (MP_TAC o Q.SPEC ‘n’)
+  >> rw[]
+  >> Know ‘abs (f1 n + f2 n) ≤ c * abs (g1 n) + c' * abs (g2 n)’
+  >- (‘abs (f1 n + f2 n) ≤ abs (f1 n) + abs (f2 n)’ by rw[ABS_TRIANGLE] \\
+      Know ‘abs (f1 n) + abs (f2 n) ≤ c * abs (g1 n) + c' * abs (g2 n)’
+      >- (MATCH_MP_TAC REAL_LE_ADD2 \\
+          METIS_TAC[]) \\
+      DISCH_TAC \\
+      METIS_TAC[REAL_LE_TRANS])
+  >> DISCH_TAC
+  >> Know ‘c * abs (g1 n) + c' * abs (g2 n) ≤ abs((abs (g1 n) + abs (g2 n))) * max c c'’
+  >- (‘c ≤ max c c'’ by rw[REAL_LE_MAX1] \\
+      Cases_on ‘abs (g1 n) = 0’
+      >- (‘c * abs (g1 n) ≤ max c c' * abs (g1 n)’
+          by METIS_TAC [REAL_MUL_RZERO, REAL_NEG_0, REAL_EQ_IMP_LE] \\
+          cheat) \\
+      ‘0 < abs (g1 n)’ by cheat (* METIS_TAC [ABS_NZ] *)  \\
+      ‘c * abs (g1 n) ≤ max c c' * abs (g1 n)’ by cheat (* METIS_TAC[REAL_LE_LMUL] *) \\
+      ‘c' ≤ max c c'’ by rw[REAL_LE_MAX2] \\
+      Cases_on ‘abs (g2 n) = 0’
+      >- (‘c' * abs (g2 n) ≤ max c c' * abs (g2 n)’
+            by METIS_TAC [REAL_MUL_RZERO, REAL_NEG_0, REAL_EQ_IMP_LE] \\
+          cheat) \\
+      ‘0 < abs (g2 n)’ by cheat (* METIS_TAC [ABS_NZ] *)  \\
+      ‘c' * abs (g2 n) ≤ max c c' * abs (g2 n)’ by cheat (* METIS_TAC[REAL_LE_LMUL] *) \\
+      Know ‘c * abs (g1 n) + c' * abs (g2 n) ≤ max c c' * abs (g1 n) + max c c' * abs (g2 n)’
+      >- (MATCH_MP_TAC REAL_LE_ADD2 \\
+          METIS_TAC[]) \\
+      DISCH_TAC \\
+      ‘max c c' * abs (g1 n) + max c c' * abs (g2 n) = (abs (g1 n) + abs (g2 n)) * max c c'’
+      by rw[GSYM REAL_ADD_RDISTRIB] \\
+      FULL_SIMP_TAC std_ss [] \\
+      Know ‘(abs (g1 n) + abs (g2 n)) * max c c' = abs((abs (g1 n) + abs (g2 n))) * max c c'’
+      >- (Q.ABBREV_TAC ‘A =  abs (g1 n) + abs (g2 n)’ \\
+          Know ‘0 ≤ A’
+          >- (rw[Abbr ‘A’] \\
+              METIS_TAC [ABS_POS, REAL_LE_ADD]) \\
+          DISCH_TAC \\
+          cheat) \\
+         cheat)
+  >> DISCH_TAC
+  >> METIS_TAC [REAL_LE_TRANS]
 QED
 
 
