@@ -788,6 +788,19 @@ Proof
  >> simp []
 QED
 
+Theorem BigO_SUM:
+  ∀f g.
+        BigO f g ⇒ BigO (\n. sum (1, n) f) (\n. sum (1, n) g)
+Proof
+  rpt STRIP_TAC
+  >> FULL_SIMP_TAC std_ss [BigO_def]
+  >> qexistsl_tac [‘c’, ‘n0’]
+  >> rw[]
+  >> cheat
+QED
+
+
+
 
 Theorem central_limit:
   ∀p X Y N s b. prob_space p ∧
