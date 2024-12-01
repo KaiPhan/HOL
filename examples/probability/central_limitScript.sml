@@ -28,33 +28,33 @@ Theorem liapounov_ineq_lemma:
             ∫⁺ m (λx. abs (u x)) ≤ seminorm p m u * ((measure m (m_space m)) powr (1 - inv(p)))
 Proof
     rpt STRIP_TAC
- >> ‘p ≠ PosInf’ by rw[lt_imp_ne]
+ >> ‘p ≠ PosInf’ by rw [lt_imp_ne]
  >> ‘0 < p’ by METIS_TAC [lt_trans, lt_01]
- >> ‘p ≠ 0’ by rw[lt_imp_ne]
- >> ‘inv(p) ≠ NegInf ∧ inv(p) ≠ PosInf’ by rw[inv_not_infty]
+ >> ‘p ≠ 0’ by rw [lt_imp_ne]
+ >> ‘inv(p) ≠ NegInf ∧ inv(p) ≠ PosInf’ by rw [inv_not_infty]
  >> ‘p ≠ NegInf’ by METIS_TAC [extreal_0_simps, lt_trans]
  >> ‘0 < inv (p)’ by METIS_TAC [inv_pos']
- >> ‘inv(p) ≠ 0’ by rw[lt_imp_ne]
+ >> ‘inv(p) ≠ 0’ by rw [lt_imp_ne]
  >> Know ‘inv (p) < 1’
- >- (‘1 * inv(p) < p * inv(p)’ by rw[lt_rmul] \\
+ >- (‘1 * inv(p) < p * inv(p)’ by rw [lt_rmul] \\
      ‘p / p = p * inv(p)’ by rw [div_eq_mul_rinv] \\
      ‘p / p = 1’ by METIS_TAC [div_refl_pos] \\
-     ‘inv(p) = 1 * inv(p)’ by rw[] \\
+     ‘inv(p) = 1 * inv(p)’ by rw [] \\
      METIS_TAC [])
  >> DISCH_TAC
- >> ‘0 < 1 - inv(p)’ by rw[sub_zero_lt]
- >> ‘1 - inv(p) ≠ 0’ by rw[lt_imp_ne]
+ >> ‘0 < 1 - inv(p)’ by rw [sub_zero_lt]
+ >> ‘1 - inv(p) ≠ 0’ by rw [lt_imp_ne]
  >> Know ‘1 - inv(p) ≠ NegInf’
  >- (‘∃a. inv(p) = Normal a’ by METIS_TAC [extreal_cases] \\
      ‘∃c. Normal 1 - Normal a = Normal c’ by METIS_TAC [extreal_sub_def] \\
      Know ‘1 - inv(p) = Normal c’
-     >- (‘1 = Normal 1’ by rw[] >> rw[]) >> rw[])
+     >- (‘1 = Normal 1’ by rw[] >> rw[]) >> rw [])
  >> DISCH_TAC
  >> Know ‘1 - inv(p) ≠ PosInf’
  >- (‘∃b. inv(p) = Normal b’ by METIS_TAC [extreal_cases]
      >> ‘∃d. Normal 1 - Normal b = Normal d’ by METIS_TAC [extreal_sub_def]
      >> Know ‘1 - inv(p) = Normal d’
-     >- (‘1 = Normal 1’ by rw[] >> rw[]) >> rw[])
+     >- (‘1 = Normal 1’ by rw [] >> rw []) >> rw [])
  >> DISCH_TAC
  >> Q.ABBREV_TAC ‘q = inv(1- inv(p))’
  >> Know ‘inv(p) + inv(q) = 1’
@@ -66,70 +66,70 @@ Proof
      MATCH_MP_TAC inv_pos' \\
      CONJ_TAC (*  0 < 1 − p⁻¹ *)
      >- (MATCH_MP_TAC sub_zero_lt \\
-         MP_TAC ( Q.SPECL [‘p’, ‘1’] inv_lt_antimono) \\
-         simp[lt_01, inv_one]) \\
+         MP_TAC (Q.SPECL [‘p’, ‘1’] inv_lt_antimono) \\
+         simp [lt_01, inv_one]) \\
       (*  1 − p⁻¹ ≠ +∞ *)
-    rw[])
+    rw [])
  >> DISCH_TAC
  >> Know ‘q ≠ PosInf’
  >- (Q.UNABBREV_TAC ‘q’ \\
-     rw[inv_not_infty])
+     rw [inv_not_infty])
  >> DISCH_TAC
  >> MP_TAC (Q.SPECL [‘m’, ‘u’, ‘λx. 1’, ‘p’, ‘q’]
             Hoelder_inequality')
  >> impl_tac
  >> simp[]
  (* (λx. 1) ∈ lp_space q m*)
- >- (rw[lp_space_def]
+ >- (rw [lp_space_def]
  (*  (λx. 1) ∈ Borel_measurable (measurable_space m) *)
      >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST' \\
          rw [measure_space_def])
     (* ∫⁺ m (λx. abs 1 powr q) ≠ +∞ *)
-     >> ‘abs 1 = 1’ by rw[abs_refl]
-     >> rw[]
+     >> ‘abs 1 = 1’ by rw [abs_refl]
+     >> rw []
      >> Know ‘1 powr q = 1’
      >- (MATCH_MP_TAC one_powr \\
          MATCH_MP_TAC lt_imp_le \\
-         rw[])
+         rw [])
      >> DISCH_TAC
-     >> simp[]
+     >> simp []
     (* ∫⁺ m (λx. 1) ≠ +∞ *)
      >> MP_TAC (Q.SPECL [‘m’, ‘1’] pos_fn_integral_const)
      >> impl_tac
-     >> simp[]
+     >> simp []
      >> DISCH_TAC
-     >> ‘1 = Normal 1’ by rw[]
+     >> ‘1 = Normal 1’ by rw []
     (*  measure m (m_space m) <> +∞ *)
-     >> rw[]
-     >> ‘measure m (m_space m) ≠ +∞’ by rw[lt_imp_ne]
+     >> rw []
+     >> ‘measure m (m_space m) ≠ +∞’ by rw [lt_imp_ne]
      >> rw [mul_not_infty])
  >> DISCH_TAC
  >> Know ‘seminorm q m (λx. 1) = ((measure m (m_space m)) powr (1 - inv(p)))’
- >- (rw[seminorm_def] \\
+ >- (rw [seminorm_def] \\
      Know ‘inv (q) = 1 - inv (p)’
      >- (Q.UNABBREV_TAC ‘q’ \\
-         rw[inv_inv]) \\
+         rw [inv_inv]) \\
      DISCH_TAC \\
-     rw[] \\
-    ‘abs 1 = 1’ by rw[abs_refl] \\
-     rw[] \\
+     rw [] \\
+    ‘abs 1 = 1’ by rw [abs_refl] \\
+     rw [] \\
      Know ‘1 powr q = 1’
      >- (MATCH_MP_TAC one_powr \\
          MATCH_MP_TAC lt_imp_le \\
-         rw[]) \\
+         rw []) \\
      DISCH_TAC  \\
-    ‘1 = Normal 1’ by rw[] \\
-     simp[] \\
+    ‘1 = Normal 1’ by rw [] \\
+     simp [] \\
      Know ‘∫⁺ m (λx. Normal 1) =  measure m (m_space m)’
      >- (MP_TAC (Q.SPECL [‘m’, ‘1’] pos_fn_integral_const) \\
          impl_tac \\
-         simp[] \\
-        ‘1 * measure m (m_space m) =  measure m (m_space m) ’ by rw[mul_lone] \\
-         simp[] \\
+         simp [] \\
+        ‘1 * measure m (m_space m) =  measure m (m_space m) ’ by rw [mul_lone] \\
+         simp [] \\
          DISCH_TAC \\
-         METIS_TAC[]) \\
+         METIS_TAC []) \\
      DISCH_TAC \\
-     simp[])
+     simp [])
  >> DISCH_TAC
  >> METIS_TAC []
 QED
@@ -146,7 +146,7 @@ Proof
  >> ‘0 < r'’ by METIS_TAC [lt_trans]
  >> ‘r < PosInf’ by METIS_TAC [lt_trans]
  >> ‘r ≠ 0 ∧ r' ≠ 0’ by rw [lt_imp_ne]
- >> ‘r ≠ PosInf ∧ r' ≠ PosInf ’ by rw[lt_imp_ne]
+ >> ‘r ≠ PosInf ∧ r' ≠ PosInf ’ by rw [lt_imp_ne]
  >> ‘NegInf < r ∧ NegInf < r'’ by METIS_TAC [extreal_0_simps, lt_trans]
  >> ‘r ≠ NegInf ∧ r' ≠ NegInf’ by METIS_TAC [lt_imp_ne]
  >> Know ‘inv r <> PosInf /\ inv r <> NegInf’
@@ -155,15 +155,15 @@ Proof
  >- (MATCH_MP_TAC inv_not_infty >> art []) >> DISCH_TAC
  >> ‘0 < inv (r) ∧ 0 < inv (r')’ by METIS_TAC [inv_pos']
  >> ‘inv(r) ≠ 0 ∧ inv(r') ≠ 0’ by rw [lt_imp_ne]
- >> ‘inv(r') * r ≠ NegInf ∧ inv(r') * r ≠ PosInf’ by METIS_TAC[mul_not_infty2]
- >>  ‘r' * inv(r) ≠ NegInf ∧ r' * inv(r) ≠ PosInf’ by METIS_TAC[mul_not_infty2]
+ >> ‘inv(r') * r ≠ NegInf ∧ inv(r') * r ≠ PosInf’ by METIS_TAC [mul_not_infty2]
+ >>  ‘r' * inv(r) ≠ NegInf ∧ r' * inv(r) ≠ PosInf’ by METIS_TAC [mul_not_infty2]
  >> Know ‘1 < r' * r⁻¹’
- >- (‘r * inv(r) < r' * inv(r)’ by rw[lt_rmul] \\
+ >- (‘r * inv(r) < r' * inv(r)’ by rw [lt_rmul] \\
      ‘r / r = r * inv(r)’ by rw [div_eq_mul_rinv] \\
      ‘r / r = 1’ by METIS_TAC [div_refl_pos] \\
-     METIS_TAC[])
+     METIS_TAC [])
  >> DISCH_TAC
- >> ‘0 < r' * inv(r)’ by METIS_TAC[lt_01, lt_trans]
+ >> ‘0 < r' * inv(r)’ by METIS_TAC [lt_01, lt_trans]
  >> MP_TAC (Q.SPECL [‘m’, ‘λx. abs (u x) powr r’, ‘r'* inv(r)’]
             liapounov_ineq_lemma)
  >> impl_tac
@@ -183,17 +183,17 @@ Proof
         (* 0 ≤ r*)
          CONJ_TAC
          >- (MATCH_MP_TAC lt_imp_le \\
-             rw[]) \\
+             rw []) \\
         (* r ≠ +∞ *)
-             simp[])
+             simp [])
       (* ∫⁺ m (λx. abs (abs (u x) powr r) powr (r' * r⁻¹)) ≠ +∞ *)
       >> ‘∀x. abs (abs (u x) powr r) = abs (u x) powr r’ by rw [abs_pos, powr_pos, abs_refl]
       >> POP_ORW
-      >> ‘∀x. (abs (u x) powr r) powr (r' * r⁻¹) = abs (u x) powr (r * (r' * r⁻¹))’ by rw[powr_powr]
+      >> ‘∀x. (abs (u x) powr r) powr (r' * r⁻¹) = abs (u x) powr (r * (r' * r⁻¹))’ by rw [powr_powr]
       >> POP_ORW
-      >> ‘r * (r' * r⁻¹) = r * inv(r) * r'’ by PROVE_TAC[mul_comm, mul_assoc]
+      >> ‘r * (r' * r⁻¹) = r * inv(r) * r'’ by PROVE_TAC [mul_comm, mul_assoc]
       >> ‘inv(r) * r = r / r’ by rw [GSYM div_eq_mul_linv]
-      >> ‘r * inv(r) = inv(r) * r’ by PROVE_TAC[mul_comm]
+      >> ‘r * inv(r) = inv(r) * r’ by PROVE_TAC [mul_comm]
       >> ‘r / r = 1’ by METIS_TAC [div_refl_pos]
       >> FULL_SIMP_TAC std_ss [mul_lone])
  >> DISCH_TAC
@@ -207,14 +207,14 @@ Proof
  >> ‘∀x. abs (abs (u x) powr r) = abs (u x) powr r’ by rw [abs_pos, powr_pos, abs_refl]
  >> FULL_SIMP_TAC std_ss []
  >> Know ‘seminorm (r' * r⁻¹) m (λx. abs (u x) powr r) = (seminorm r' m u) powr r’
- >- (rw[seminorm_def] \\
-     ‘∀x. (abs (u x) powr r) powr (r' * r⁻¹) =  abs (u x) powr (r * (r' * r⁻¹))’ by rw[abs_pos, powr_powr] \\
+ >- (rw [seminorm_def] \\
+     ‘∀x. (abs (u x) powr r) powr (r' * r⁻¹) =  abs (u x) powr (r * (r' * r⁻¹))’ by rw [abs_pos, powr_powr] \\
      POP_ORW \\
-     ‘∀x. abs (u x) powr (r * (r' * r⁻¹)) = abs (u x) powr (r⁻¹ * r * r')’ by PROVE_TAC[mul_assoc, mul_comm] \\
+     ‘∀x. abs (u x) powr (r * (r' * r⁻¹)) = abs (u x) powr (r⁻¹ * r * r')’ by PROVE_TAC [mul_assoc, mul_comm] \\
      POP_ORW \\
-     ‘∀x. abs (u x) powr (r⁻¹ * r * r') = abs (u x) powr r'’ by rw[mul_linv_pos, mul_lone] \\
+     ‘∀x. abs (u x) powr (r⁻¹ * r * r') = abs (u x) powr r'’ by rw [mul_linv_pos, mul_lone] \\
      POP_ORW \\
-     ‘inv(r' * inv(r)) = inv(r') * r’ by rw[inv_mul, inv_inv] \\
+     ‘inv(r' * inv(r)) = inv(r') * r’ by rw [inv_mul, inv_inv] \\
      POP_ORW \\
      Know ‘0 ≤ ∫⁺ m (λx. abs (u x) powr r')’
      >- (MATCH_MP_TAC pos_fn_integral_pos \\
@@ -223,7 +223,7 @@ Proof
          METIS_TAC [abs_pos, powr_pos]) \\
      DISCH_TAC \\
      ‘∫⁺ m (λx. abs (u x) powr r') powr (r'⁻¹ * r) = (∫⁺ m (λx. abs (u x) powr r') powr r'⁻¹) powr r’
-         by rw[GSYM powr_powr])
+         by rw [GSYM powr_powr])
  >> DISCH_TAC
  >> FULL_SIMP_TAC std_ss []
  >> Q.ABBREV_TAC ‘A =  ∫⁺ m (λx. abs (u x) powr r)’
@@ -231,7 +231,7 @@ Proof
  >> simp []
  >> Know ‘A powr inv(r) ≤ B powr inv(r)’
  >- (Know ‘0 ≤ A’
-     >- (rw[Abbr ‘A’] \\
+     >- (rw [Abbr ‘A’] \\
          MATCH_MP_TAC pos_fn_integral_pos \\
          simp[] \\
         (* ∀x. x ∈ m_space m ⇒ 0 ≤ abs (u x) powr r'*)
@@ -248,7 +248,7 @@ Proof
  >> DISCH_TAC
  >> Q.UNABBREV_TAC ‘A’
  >> Q.UNABBREV_TAC ‘B’
- >> ‘∫⁺ m (λx. abs (u x) powr r) powr inv(r) = seminorm r m u’ by rw[seminorm_def]
+ >> ‘∫⁺ m (λx. abs (u x) powr r) powr inv(r) = seminorm r m u’ by rw [seminorm_def]
  >> FULL_SIMP_TAC std_ss []
  >> Q.ABBREV_TAC ‘C = seminorm r' m u’
  >> Q.ABBREV_TAC ‘D = mu powr (1 − (r' * r⁻¹)⁻¹)’
@@ -256,11 +256,11 @@ Proof
  >> Know ‘(C powr r * D) powr r⁻¹ = C * D powr inv(r)’
  >- (‘0 ≤ C’ by PROVE_TAC [seminorm_pos] \\
      ‘0 ≤ C powr r’ by PROVE_TAC [powr_pos] \\
-     ‘0 ≤ D’ by METIS_TAC[powr_pos] \\
-     ‘(C powr r * D) powr r⁻¹ = (C powr r) powr r⁻¹ * D powr inv(r)’ by  METIS_TAC[mul_powr] \\
-     ‘(C powr r) powr r⁻¹ = C powr (r * inv(r))’ by METIS_TAC[powr_powr] \\
-     ‘C powr (r * inv(r)) = C’ by METIS_TAC[GSYM div_eq_mul_rinv, div_refl_pos, powr_1] \\
-      simp[])
+     ‘0 ≤ D’ by METIS_TAC [powr_pos] \\
+     ‘(C powr r * D) powr r⁻¹ = (C powr r) powr r⁻¹ * D powr inv(r)’ by METIS_TAC [mul_powr] \\
+     ‘(C powr r) powr r⁻¹ = C powr (r * inv(r))’ by METIS_TAC [powr_powr] \\
+     ‘C powr (r * inv(r)) = C’ by METIS_TAC [GSYM div_eq_mul_rinv, div_refl_pos, powr_1] \\
+      simp [])
  >> DISCH_TAC
  >> FULL_SIMP_TAC std_ss []
  >> Q.UNABBREV_TAC ‘C’
@@ -268,36 +268,36 @@ Proof
  >> Know ‘(mu powr (1 − (r' * r⁻¹)⁻¹)) powr r⁻¹ =
            mu powr (r⁻¹ − r'⁻¹)’
  >- (Know ‘r * inv(r') < 1’
-     >- (‘r * inv(r') < r' * inv(r')’ by rw[lt_rmul] \\
+     >- (‘r * inv(r') < r' * inv(r')’ by rw [lt_rmul] \\
          ‘r' / r' = r' * inv(r')’ by rw [div_eq_mul_rinv] \\
          ‘r' / r' = 1’ by METIS_TAC [div_refl_pos] \\
-          METIS_TAC[]) \\
+          METIS_TAC []) \\
      DISCH_TAC \\
-    ‘r * r'⁻¹ = r'⁻¹ * r’ by METIS_TAC[mul_comm] \\
+    ‘r * r'⁻¹ = r'⁻¹ * r’ by METIS_TAC [mul_comm] \\
      FULL_SIMP_TAC std_ss [] \\
-    ‘(r' * r⁻¹)⁻¹ = inv(r') * r’ by METIS_TAC[inv_mul, inv_inv, mul_comm] \\
-     simp[] \\
-    ‘0 < 1 - inv(r') * r’ by METIS_TAC[sub_zero_lt] \\
+    ‘(r' * r⁻¹)⁻¹ = inv(r') * r’ by METIS_TAC [inv_mul, inv_inv, mul_comm] \\
+     simp [] \\
+    ‘0 < 1 - inv(r') * r’ by METIS_TAC [sub_zero_lt] \\
      Know ‘1 − r'⁻¹ * r ≠ PosInf’
      >- (‘∃b. r'⁻¹ * r  = Normal b’ by METIS_TAC [extreal_cases] \\
-          rw[sub_not_infty]) \\
+          rw [sub_not_infty]) \\
      DISCH_TAC \\
     ‘(mu powr (1 − r'⁻¹ * r)) powr r⁻¹ = mu powr ((1 − r'⁻¹ * r) * inv(r))’
          by METIS_TAC [powr_powr] \\
      POP_ORW \\
-    ‘(1 − r'⁻¹ * r) * r⁻¹ =  r⁻¹ * (1 − r'⁻¹ * r)’ by METIS_TAC[mul_comm] \\
+    ‘(1 − r'⁻¹ * r) * r⁻¹ =  r⁻¹ * (1 − r'⁻¹ * r)’ by METIS_TAC [mul_comm] \\
      POP_ORW \\
     ‘r⁻¹ * (1 − r'⁻¹ * r) = ((r⁻¹) * 1) - (r⁻¹ * (r'⁻¹ * r))’ by rw [sub_ldistrib] \\
      POP_ORW \\
-    ‘r⁻¹ * (r'⁻¹ * r) = r⁻¹ * r * r'⁻¹’ by METIS_TAC[mul_assoc] \\
+    ‘r⁻¹ * (r'⁻¹ * r) = r⁻¹ * r * r'⁻¹’ by METIS_TAC [mul_assoc] \\
      POP_ORW \\
     ‘inv(r) * r = r / r’ by rw [GSYM div_eq_mul_linv] \\
     ‘r / r = 1’ by METIS_TAC [div_refl_pos] \\
      FULL_SIMP_TAC std_ss [] \\
      POP_ORW \\
-    ‘r⁻¹ * 1 − 1 * r'⁻¹ = r⁻¹ − r'⁻¹’ by rw[mul_rone] \\
+    ‘r⁻¹ * 1 − 1 * r'⁻¹ = r⁻¹ − r'⁻¹’ by rw [mul_rone] \\
      POP_ORW \\
-     rw[])
+     rw [])
  >> DISCH_TAC
  >> FULL_SIMP_TAC std_ss[]
 QED
@@ -319,15 +319,15 @@ Proof
  >> Know ‘0 < r⁻¹ − r'⁻¹’
  >- (‘0 < r'’ by METIS_TAC [lt_trans] \\
      ‘inv(r') < inv(r)’ by METIS_TAC [inv_lt_antimono] \\
-     METIS_TAC[sub_zero_lt])
+     METIS_TAC [sub_zero_lt])
  >> DISCH_TAC
  >> Know ‘1 powr (r⁻¹ − r'⁻¹) = 1’
  >- (MATCH_MP_TAC one_powr \\
      MATCH_MP_TAC lt_imp_le \\
-     rw[])
+     rw [])
  >> DISCH_TAC
  >> FULL_SIMP_TAC std_ss []
- >> ‘seminorm r' p u * 1 = seminorm r' p u’ by rw[mul_rone]
+ >> ‘seminorm r' p u * 1 = seminorm r' p u’ by rw [mul_rone]
  >> FULL_SIMP_TAC std_ss []
 QED
 
@@ -354,10 +354,10 @@ Proof
  >> Q.EXISTS_TAC ‘MAX N m’ >> rw [MAX_LE]
  >> sg ‘expectation p (Normal ∘ f ∘ real ∘ Y n) =
         expectation p (Normal ∘ f ∘ real ∘ X n)’
- >- (MATCH_MP_TAC expectation_cong \\ rw[])
+ >- (MATCH_MP_TAC expectation_cong \\ rw [])
  >> sg ‘expectation p (Normal ∘ f ∘ real ∘ B) =
           expectation p (Normal ∘ f ∘ real ∘ A)’
- >- (MATCH_MP_TAC expectation_cong \\ rw[])
+ >- (MATCH_MP_TAC expectation_cong \\ rw [])
  >> METIS_TAC [])
  >> Q.PAT_X_ASSUM ‘ ∀f. bounded (IMAGE f 𝕌(:real)) ∧ f continuous_on 𝕌(:real)
                         ==> P’ (MP_TAC o (Q.SPEC ‘f’)) >> rw []
@@ -365,10 +365,10 @@ Proof
  >> Q.EXISTS_TAC ‘MAX N m’ >> rw [MAX_LE]
  >> sg ‘expectation p (Normal ∘ f ∘ real ∘ Y n) =
         expectation p (Normal ∘ f ∘ real ∘ X n)’
- >- (MATCH_MP_TAC expectation_cong \\ rw[])
+ >- (MATCH_MP_TAC expectation_cong \\ rw [])
  >> sg ‘expectation p (Normal ∘ f ∘ real ∘ B) =
         expectation p (Normal ∘ f ∘ real ∘ A)’
- >- (MATCH_MP_TAC expectation_cong \\ rw[])
+ >- (MATCH_MP_TAC expectation_cong \\ rw [])
  >> METIS_TAC []
 QED
 
@@ -427,9 +427,9 @@ Proof
     rpt GEN_TAC
     >> qexistsl [‘M’, ‘t’]
     >> STRIP_TAC
-    >> ‘diff n t / &FACT n = diff n t * (&FACT n)⁻¹’ by METIS_TAC[real_div]
+    >> ‘diff n t / &FACT n = diff n t * (&FACT n)⁻¹’ by METIS_TAC [real_div]
     >> POP_ORW
-    >> ‘M / &FACT n =  M * (&FACT n)⁻¹’ by METIS_TAC[real_div]
+    >> ‘M / &FACT n =  M * (&FACT n)⁻¹’ by METIS_TAC [real_div]
     >> POP_ORW
     >> ‘!n. &0 < (&FACT n:real)’ by rw [REAL_LT, FACT_LESS]
     >> POP_ASSUM (MP_TAC o Q.SPEC ‘n’)
@@ -439,14 +439,14 @@ Proof
     >> ‘abs (diff n t) * inv(&FACT n) ≤ M  * inv(&FACT n)’ by
         METIS_TAC [REAL_LE_RMUL]
     >> ‘abs (inv(&FACT n:real)) = inv(&FACT n)’ by rw[ABS_REFL]
-    >> ‘abs (diff n t) * abs (&FACT n)⁻¹ = abs (diff n t) * (&FACT n)⁻¹’ by rw[]
-    >> ‘abs (diff n t) * abs (&FACT n)⁻¹ = abs (diff n t * (&FACT n)⁻¹)’ by METIS_TAC[ABS_MUL]
-    >> ‘abs (diff n t * (&FACT n)⁻¹) ≤ M  * inv(&FACT n)’ by METIS_TAC[]
+    >> ‘abs (diff n t) * abs (&FACT n)⁻¹ = abs (diff n t) * (&FACT n)⁻¹’ by rw []
+    >> ‘abs (diff n t) * abs (&FACT n)⁻¹ = abs (diff n t * (&FACT n)⁻¹)’ by METIS_TAC [ABS_MUL]
+    >> ‘abs (diff n t * (&FACT n)⁻¹) ≤ M  * inv(&FACT n)’ by METIS_TAC []
     >> ‘0 ≤ abs (x pow n)’ by METIS_TAC [REAL_ABS_POS]
     >> Cases_on ‘x pow n = 0’
     >- (‘x = 0’ by METIS_TAC [POW_ZERO] \\
-        ‘abs x pow n = abs (x pow n)’ by rw[POW_ABS] \\
-        ‘abs (x pow n) = 0’ by METIS_TAC[REAL_ABS_0] \\
+        ‘abs x pow n = abs (x pow n)’ by rw [POW_ABS] \\
+        ‘abs (x pow n) = 0’ by METIS_TAC [REAL_ABS_0] \\
         ‘diff n t * (&FACT n)⁻¹ * x pow n = 0’ by METIS_TAC [REAL_MUL_RZERO] \\
         ‘M * (&FACT n)⁻¹ * abs x pow n = 0’ by METIS_TAC [REAL_MUL_RZERO] \\
         METIS_TAC [])
@@ -471,9 +471,9 @@ Theorem TAYLOR_THEOREM:
 Proof
     rpt STRIP_TAC
  >> Q.ABBREV_TAC ‘g = λx. f (x + a)’
- >> ‘∀x. g x = f (x + a)’ by rw[Abbr ‘g’]
+ >> ‘∀x. g x = f (x + a)’ by rw [Abbr ‘g’]
  >> POP_ASSUM (MP_TAC o Q.SPEC ‘x - a’)
- >> ‘f (x - a + a) = f x’ by METIS_TAC[REAL_SUB_ADD]
+ >> ‘f (x - a + a) = f x’ by METIS_TAC [REAL_SUB_ADD]
  >> POP_ORW
  >> DISCH_TAC
  >> Q.ABBREV_TAC ‘diff' = \n x. diff n (x + a)’
@@ -481,20 +481,20 @@ Proof
  >> impl_tac
  >- (CONJ_TAC
     (* 0 < x − a *)
-     >- (rw[REAL_SUB_LT])
+     >- (rw [REAL_SUB_LT])
      >> CONJ_TAC
     (* 0 < n *)
-     >> fs[]
+     >> fs []
      >> CONJ_TAC
     (* diff' 0 = g *)
-     >- (rw[Abbr ‘diff'’])
+     >- (rw [Abbr ‘diff'’])
      (* ∀m t. m < n ∧ 0 ≤ t ∧ t ≤ x − a ⇒ (diff' m diffl diff' (SUC m) t) t *)
      >> Q.UNABBREV_TAC ‘diff'’
      >> BETA_TAC
      >> qx_genl_tac [‘m’, ‘t’]
      >> STRIP_TAC
-     >> ‘a ≤ t + a’ by rw[REAL_LE_ADDL]
-     >> ‘t + a ≤ x’ by METIS_TAC[REAL_LE_SUB_LADD]
+     >> ‘a ≤ t + a’ by rw [REAL_LE_ADDL]
+     >> ‘t + a ≤ x’ by METIS_TAC [REAL_LE_SUB_LADD]
      >> Q.PAT_X_ASSUM ‘∀m t. m < n ∧ a ≤ t ∧ t ≤ x ⇒
                              (diff m diffl diff (SUC m) t) t’
        (MP_TAC o Q.SPECL [‘m’, ‘t + a’])
@@ -510,22 +510,22 @@ Proof
              impl_tac \\
              METIS_TAC [DIFF_X, DIFF_CONST] \\
              BETA_TAC \\
-             simp[])
-         >> simp[REAL_ADD_RID])
-         >> simp[])
+             simp [])
+         >> simp [REAL_ADD_RID])
+         >> simp [])
  >> simp[]
  >> DISCH_THEN (Q.X_CHOOSE_TAC ‘t’)
  >> Q.EXISTS_TAC ‘t + a’
  >> CONJ_TAC
- >- (rw[REAL_LT_ADDL])
+ >- (rw [REAL_LT_ADDL])
  >> CONJ_TAC
- >- (rw[REAL_LT_ADD_SUB])
+ >- (rw [REAL_LT_ADD_SUB])
  >> Know ‘∀m. diff' m 0 = diff m a’
     >- (Q.UNABBREV_TAC ‘diff'’ \\
         BETA_TAC \\
-        simp[])
+        simp [])
  >> DISCH_TAC
- >> simp[]
+ >> simp []
 QED
 
 
@@ -541,55 +541,55 @@ Proof
     rpt GEN_TAC
  >> STRIP_TAC
  >> MP_TAC (Q.SPECL [‘f’, ‘diff’, ‘x’, ‘x + y’, ‘3’] TAYLOR_THEOREM)
- >> simp[]
+ >> simp []
  >> DISCH_THEN (Q.X_CHOOSE_THEN ‘t’ STRIP_ASSUME_TAC)
- >> ‘x + y − x = y’ by rw[REAL_ADD_SUB]
+ >> ‘x + y − x = y’ by rw [REAL_ADD_SUB]
  >> FULL_SIMP_TAC std_ss []
  >> Know ‘sum (0,3) (λm. diff m x / &FACT m * y pow m) =
            (f x + diff 1 x * y + diff 2 x / 2 * y²)’
  >- (EVAL_TAC \\
-     simp[])
- >> fs[]
+     simp [])
+ >> fs []
  >> DISCH_TAC
  >> Q.ABBREV_TAC ‘Z = f x + diff 1 x * y + diff 2 x / 2 * y²’
- >> fs[]
- >> ‘Z + y³ * (&FACT 3)⁻¹ * diff 3 t − Z =   y³ * (&FACT 3)⁻¹ * diff 3 t’ by rw[REAL_ADD_SUB]
+ >> fs []
+ >> ‘Z + y³ * (&FACT 3)⁻¹ * diff 3 t − Z =   y³ * (&FACT 3)⁻¹ * diff 3 t’ by rw [REAL_ADD_SUB]
  >> POP_ORW
  >> Q.UNABBREV_TAC ‘Z’
  >> ‘inv(&FACT 3) = (inv(6):real)’ by EVAL_TAC
  >> POP_ORW
- >> simp[]
- >> ‘abs (1 / 6 * (y³ * diff 3 t)) = abs (1/6) * abs (y³ * diff 3 t)’ by rw[ABS_MUL]
+ >> simp []
+ >> ‘abs (1 / 6 * (y³ * diff 3 t)) = abs (1/6) * abs (y³ * diff 3 t)’ by rw [ABS_MUL]
  >> POP_ORW
  >> ‘6 * (abs (1 / 6) * abs (y³ * diff 3 t)) = abs (y³ * diff 3 t)’
-     by rw[GSYM REAL_MUL_ASSOC, ABS_REFL, REAL_MUL_RINV, REAL_MUL_RID]
+     by rw [GSYM REAL_MUL_ASSOC, ABS_REFL, REAL_MUL_RINV, REAL_MUL_RID]
  >> POP_ORW
- >> ‘abs (y³ * diff 3 t) = abs (y³) * abs (diff 3 t)’ by rw[ABS_MUL]
+ >> ‘abs (y³ * diff 3 t) = abs (y³) * abs (diff 3 t)’ by rw [ABS_MUL]
  >> POP_ORW
- >> ‘abs (y pow 3) = abs y pow 3’ by METIS_TAC[POW_ABS]
+ >> ‘abs (y pow 3) = abs y pow 3’ by METIS_TAC [POW_ABS]
  >> POP_ORW
  >> MATCH_MP_TAC REAL_LE_LMUL1
  >> CONJ_TAC
- >- (METIS_TAC[ABS_POS, POW_POS])
+ >- (METIS_TAC [ABS_POS, POW_POS])
  >> irule REAL_SUP_UBOUND_LE
  >> CONJ_TAC
  >- (ONCE_REWRITE_TAC [GSYM SPECIFICATION]\\
-     simp[] \\
+     simp [] \\
      qexists ‘t’ \\
-     rw[])
+     rw [])
  >> CONJ_TAC
  >- (qexists ‘abs (diff 3 0)’ \\
      ONCE_REWRITE_TAC [GSYM SPECIFICATION]\\
-     simp[] \\
+     simp [] \\
      qexists ‘0’ \\
-     rw[])
+     rw [])
  >> qexists ‘z’
  >> GEN_TAC
  >> Know ‘{abs (diff 3 x) | x | T} x' ⇔ x' IN {abs (diff 3 x) | x | T}’
  >- (REWRITE_TAC [SPECIFICATION]) >> Rewr'
- >> simp[]
+ >> simp []
  >> STRIP_TAC
- >> rw[]
+ >> rw []
 QED
 
 Theorem normal_absolute_third_moment:
@@ -605,28 +605,28 @@ Theorem IN_MEASURABLE_BOREL_SUM_CMUL:
                (∀x. x ∈ space a ⇒ g x = Normal z * ∑ (λi. f i x) s) ⇒
                g ∈ Borel_measurable a
 Proof
-  RW_TAC std_ss []
-  >> Cases_on `Normal z = 0`
-  >- METIS_TAC [IN_MEASURABLE_BOREL_CONST, mul_lzero]
-  >> Q.ABBREV_TAC ‘h = λx. ∑ (λi. (f: β -> α -> extreal) i x) s’
-  >> ‘∀x. h x = ∑ (λi. f i x) s’ by rw[Abbr ‘h’]
-  >> MP_TAC (Q.SPECL [‘a’, ‘(f: 'b -> 'a -> extreal)’, ‘h’, ‘s’]
-                      IN_MEASURABLE_BOREL_SUM')
-  >> impl_tac
-  >- (METIS_TAC[])
-  >> DISCH_TAC
-  >> MP_TAC (Q.SPECL [‘a’, ‘h’, ‘λx. Normal z * h x’, ‘z’]
-              IN_MEASURABLE_BOREL_CMUL)
-  >> impl_tac
-  >- (METIS_TAC[])
-  >> ‘!x. x IN space a ==> (Normal z * h x = g x)’ by rw [Abbr ‘h’]
-  >> DISCH_TAC
-  >> MP_TAC (Q.SPECL [‘a’, ‘g’, ‘λx. Normal z * h x’]
-              IN_MEASURABLE_BOREL_EQ')
-  >> impl_tac
-  >> BETA_TAC
-  >- (METIS_TAC[])
-  >> simp[]
+    RW_TAC std_ss []
+ >> Cases_on `Normal z = 0`
+ >- METIS_TAC [IN_MEASURABLE_BOREL_CONST, mul_lzero]
+ >> Q.ABBREV_TAC ‘h = λx. ∑ (λi. (f: β -> α -> extreal) i x) s’
+ >> ‘∀x. h x = ∑ (λi. f i x) s’ by rw[Abbr ‘h’]
+ >> MP_TAC (Q.SPECL [‘a’, ‘(f: 'b -> 'a -> extreal)’, ‘h’, ‘s’]
+            IN_MEASURABLE_BOREL_SUM')
+ >> impl_tac
+ >- (METIS_TAC [])
+ >> DISCH_TAC
+ >> MP_TAC (Q.SPECL [‘a’, ‘h’, ‘λx. Normal z * h x’, ‘z’]
+            IN_MEASURABLE_BOREL_CMUL)
+ >> impl_tac
+ >- (METIS_TAC [])
+ >> ‘!x. x IN space a ==> (Normal z * h x = g x)’ by rw [Abbr ‘h’]
+ >> DISCH_TAC
+ >> MP_TAC (Q.SPECL [‘a’, ‘g’, ‘λx. Normal z * h x’]
+            IN_MEASURABLE_BOREL_EQ')
+ >> impl_tac
+ >> BETA_TAC
+ >- (METIS_TAC [])
+ >> simp []
 QED
 
 Definition BigO_def:
@@ -635,113 +635,157 @@ Definition BigO_def:
                                             abs (f n) ≤ c * abs (g n)
 End
 
-Theorem BigO_PROD:
+Theorem BigO_MUL:
   ∀f1 g1 f2 g2. BigO f1 g1 ∧
                 BigO f2 g2 ⇒ BigO (λn. f1 n * f2 n) (λn. g1 n * g2 n)
 Proof
-  rpt STRIP_TAC
-  >> FULL_SIMP_TAC std_ss [BigO_def]
-  >> qexistsl_tac [‘c * c'’, ‘MAX n0 n0'’]
-  >> rw[REAL_MAX_LE, REAL_LT_MUL]
-  >> Q.PAT_X_ASSUM ‘∀n. n0 ≤ n ⇒ abs (f1 n) ≤ c * abs (g1 n)’
-      (MP_TAC o Q.SPEC ‘n’)
-  >> rw[]
-  >> Q.PAT_X_ASSUM ‘∀n. n0' ≤ n ⇒ abs (f2 n) ≤ c' * abs (g2 n)’
-      (MP_TAC o Q.SPEC ‘n’)
-  >> rw[]
-  >> Know ‘abs (f1 n) * abs (f2 n) ≤ c * abs (g1 n) * (c' * abs (g2 n))’
-  >- (MATCH_MP_TAC REAL_LE_MUL2 \\
-      simp[])
-  >> DISCH_TAC
-  >> ‘abs (f1 n) * abs (f2 n) = abs (f1 n * f2 n)’ by rw[GSYM ABS_MUL]
-  >> ‘c * abs (g1 n) * (c' * abs (g2 n)) = c * c' * abs (g1 n * g2 n)’
-      by rw[REAL_MUL_ASSOC, REAL_MUL_COMM, GSYM ABS_MUL]
-  >> FULL_SIMP_TAC std_ss []
+    rpt STRIP_TAC
+ >> FULL_SIMP_TAC std_ss [BigO_def]
+ >> qexistsl_tac [‘c * c'’, ‘MAX n0 n0'’]
+ >> rw [REAL_MAX_LE, REAL_LT_MUL]
+ >> Q.PAT_X_ASSUM ‘∀n. n0 ≤ n ⇒ abs (f1 n) ≤ c * abs (g1 n)’
+    (MP_TAC o Q.SPEC ‘n’)
+ >> rw []
+ >> Q.PAT_X_ASSUM ‘∀n. n0' ≤ n ⇒ abs (f2 n) ≤ c' * abs (g2 n)’
+    (MP_TAC o Q.SPEC ‘n’)
+ >> rw []
+ >> Know ‘abs (f1 n) * abs (f2 n) ≤ c * abs (g1 n) * (c' * abs (g2 n))’
+ >- (MATCH_MP_TAC REAL_LE_MUL2 \\
+     simp [])
+ >> DISCH_TAC
+ >> ‘abs (f1 n) * abs (f2 n) = abs (f1 n * f2 n)’ by rw [GSYM ABS_MUL]
+ >> ‘c * abs (g1 n) * (c' * abs (g2 n)) = c * c' * abs (g1 n * g2 n)’
+     by rw [REAL_MUL_ASSOC, REAL_MUL_COMM, GSYM ABS_MUL]
+ >> FULL_SIMP_TAC std_ss []
 QED
 
-Theorem BigO_SUM:
+Theorem BigO_ADD:
   ∀f1 f2 g1 g2. BigO f1 g1 ∧ BigO f2 g2 ⇒
                 BigO (λn. f1 n + f2 n) (λn. abs (g1 n) + abs (g2 n))
 Proof
-  rpt STRIP_TAC
-  >> FULL_SIMP_TAC std_ss [BigO_def]
-  >> qexistsl_tac [‘max c c'’, ‘MAX n0 n0'’]
-  >> CONJ_TAC
-  (* 0 < max c c' *)
-  >- (rw[REAL_LT_MAX])
-  >> GEN_TAC
-  >> Q.PAT_X_ASSUM ‘∀n. n0 ≤ n ⇒ abs (f1 n) ≤ c * abs (g1 n)’
-      (MP_TAC o Q.SPEC ‘n’)
-  >> rw[]
-  >> Q.PAT_X_ASSUM ‘∀n. n0' ≤ n ⇒ abs (f2 n) ≤ c' * abs (g2 n)’
-      (MP_TAC o Q.SPEC ‘n’)
-  >> rw[]
-  >> Know ‘abs (f1 n + f2 n) ≤ c * abs (g1 n) + c' * abs (g2 n)’
-  >- (‘abs (f1 n + f2 n) ≤ abs (f1 n) + abs (f2 n)’ by rw[ABS_TRIANGLE] \\
-      Know ‘abs (f1 n) + abs (f2 n) ≤ c * abs (g1 n) + c' * abs (g2 n)’
-      >- (MATCH_MP_TAC REAL_LE_ADD2 \\
-          METIS_TAC[]) \\
-      DISCH_TAC \\
-      METIS_TAC[REAL_LE_TRANS])
-  >> DISCH_TAC
-  >> Know ‘c * abs (g1 n) + c' * abs (g2 n) ≤ abs((abs (g1 n) + abs (g2 n))) * max c c'’
-  >- (Know ‘c * abs (g1 n) ≤ max c c' * abs (g1 n)’
-      >- (‘c ≤ max c c'’ by rw[REAL_LE_MAX1] \\
-          Cases_on ‘abs (g1 n) = 0’
-          >- (METIS_TAC [REAL_MUL_RZERO, REAL_NEG_0, REAL_EQ_IMP_LE]) \\
-              ‘0 ≤ abs (g1 n)’ by METIS_TAC [ABS_POS]  \\
-              ‘0 < abs (g1 n)’ by METIS_TAC [REAL_LT_LE] \\
-          simp [GSYM REAL_LE_LMUL]) \\
-     DISCH_TAC \\
-     Know ‘c' * abs (g2 n) ≤ max c c' * abs (g2 n)’
-      >- (‘c' ≤ max c c'’ by rw[REAL_LE_MAX2] \\
-          Cases_on ‘abs (g2 n) = 0’
-          >- (METIS_TAC [REAL_MUL_RZERO, REAL_NEG_0, REAL_EQ_IMP_LE]) \\
-              ‘0 ≤ abs (g2 n)’ by METIS_TAC [ABS_POS]  \\
-              ‘0 < abs (g2 n)’ by  METIS_TAC [REAL_LT_LE] \\
-              simp [GSYM REAL_LE_LMUL]) \\
-     DISCH_TAC \\
-     Know ‘c * abs (g1 n) + c' * abs (g2 n) ≤ max c c' * abs (g1 n) + max c c' * abs (g2 n)’
+    rpt STRIP_TAC
+ >> FULL_SIMP_TAC std_ss [BigO_def]
+ >> qexistsl_tac [‘max c c'’, ‘MAX n0 n0'’]
+ >> CONJ_TAC
+ (* 0 < max c c' *)
+ >- (rw [REAL_LT_MAX])
+ >> GEN_TAC
+ >> Q.PAT_X_ASSUM ‘∀n. n0 ≤ n ⇒ abs (f1 n) ≤ c * abs (g1 n)’
+     (MP_TAC o Q.SPEC ‘n’)
+ >> rw []
+ >> Q.PAT_X_ASSUM ‘∀n. n0' ≤ n ⇒ abs (f2 n) ≤ c' * abs (g2 n)’
+     (MP_TAC o Q.SPEC ‘n’)
+ >> rw []
+ >> Know ‘abs (f1 n + f2 n) ≤ c * abs (g1 n) + c' * abs (g2 n)’
+ >- (‘abs (f1 n + f2 n) ≤ abs (f1 n) + abs (f2 n)’ by rw [ABS_TRIANGLE] \\
+     Know ‘abs (f1 n) + abs (f2 n) ≤ c * abs (g1 n) + c' * abs (g2 n)’
      >- (MATCH_MP_TAC REAL_LE_ADD2 \\
-         METIS_TAC[]) \\
+         METIS_TAC []) \\
      DISCH_TAC \\
-     ‘max c c' * abs (g1 n) + max c c' * abs (g2 n) = (abs (g1 n) + abs (g2 n)) * max c c'’
-     by rw[GSYM REAL_ADD_RDISTRIB] \\
-     FULL_SIMP_TAC std_ss [] \\
-     Know ‘(abs (g1 n) + abs (g2 n)) * max c c' = abs((abs (g1 n) + abs (g2 n))) * max c c'’
-     >- (Q.ABBREV_TAC ‘A =  abs (g1 n) + abs (g2 n)’ \\
-          Know ‘0 ≤ A’
-          >- (rw[abs] \\
-              METIS_TAC [ABS_POS, REAL_LE_ADD]) \\
-         DISCH_TAC \\
-         ‘abs A = A’ by METIS_TAC [abs] \\
-         simp[]) \\
-      DISCH_TAC \\
-      METIS_TAC[REAL_LE_TRANS])
-  >> DISCH_TAC
-  >> METIS_TAC [REAL_LE_TRANS]
+     METIS_TAC [REAL_LE_TRANS])
+ >> DISCH_TAC
+ >> Know ‘c * abs (g1 n) + c' * abs (g2 n) ≤ abs((abs (g1 n) + abs (g2 n))) * max c c'’
+ >- (Know ‘c * abs (g1 n) ≤ max c c' * abs (g1 n)’
+     >- (‘c ≤ max c c'’ by rw [REAL_LE_MAX1] \\
+         Cases_on ‘abs (g1 n) = 0’
+         >- (METIS_TAC [REAL_MUL_RZERO, REAL_NEG_0, REAL_EQ_IMP_LE]) \\
+             ‘0 ≤ abs (g1 n)’ by METIS_TAC [ABS_POS]  \\
+             ‘0 < abs (g1 n)’ by METIS_TAC [REAL_LT_LE] \\
+         simp [GSYM REAL_LE_LMUL]) \\
+    DISCH_TAC \\
+    Know ‘c' * abs (g2 n) ≤ max c c' * abs (g2 n)’
+    >- (‘c' ≤ max c c'’ by rw [REAL_LE_MAX2] \\
+        Cases_on ‘abs (g2 n) = 0’
+        >- (METIS_TAC [REAL_MUL_RZERO, REAL_NEG_0, REAL_EQ_IMP_LE]) \\
+            ‘0 ≤ abs (g2 n)’ by METIS_TAC [ABS_POS]  \\
+            ‘0 < abs (g2 n)’ by  METIS_TAC [REAL_LT_LE] \\
+            simp [GSYM REAL_LE_LMUL]) \\
+    DISCH_TAC \\
+    Know ‘c * abs (g1 n) + c' * abs (g2 n) ≤ max c c' * abs (g1 n) + max c c' * abs (g2 n)’
+    >- (MATCH_MP_TAC REAL_LE_ADD2 \\
+        METIS_TAC []) \\
+    DISCH_TAC \\
+    ‘max c c' * abs (g1 n) + max c c' * abs (g2 n) = (abs (g1 n) + abs (g2 n)) * max c c'’
+    by rw [GSYM REAL_ADD_RDISTRIB] \\
+    FULL_SIMP_TAC std_ss [] \\
+    Know ‘(abs (g1 n) + abs (g2 n)) * max c c' = abs((abs (g1 n) + abs (g2 n))) * max c c'’
+    >- (Q.ABBREV_TAC ‘A =  abs (g1 n) + abs (g2 n)’ \\
+        Know ‘0 ≤ A’
+        >- (rw [abs] \\
+            METIS_TAC [ABS_POS, REAL_LE_ADD]) \\
+        DISCH_TAC \\
+        ‘abs A = A’ by METIS_TAC [abs] \\
+        simp []) \\
+    DISCH_TAC \\
+    METIS_TAC [REAL_LE_TRANS])
+ >> DISCH_TAC
+ >> METIS_TAC [REAL_LE_TRANS]
 QED
+
+Theorem BigO_ADD_MAX:
+  ∀f1 f2 g1 g2. BigO f1 g1 ∧ BigO f2 g2 ⇒
+                BigO (λn. f1 n + f2 n) (λn. max (abs(g1 n)) (abs(g2 n)))
+Proof
+    rpt STRIP_TAC
+ >> FULL_SIMP_TAC std_ss [BigO_def]
+ >> qexistsl_tac [‘c + c'’, ‘MAX n0 n0'’]
+ >> CONJ_TAC
+ >- (METIS_TAC [REAL_LT_ADD])
+ >> GEN_TAC
+ >> DISCH_TAC
+ >> FULL_SIMP_TAC std_ss [MAX_LE]
+ >> Q.PAT_X_ASSUM ‘∀n. n0 ≤ n ⇒ abs (f1 n) ≤ c * abs (g1 n)’
+     (MP_TAC o Q.SPEC ‘n’)
+ >> rw []
+ >> Q.PAT_X_ASSUM ‘∀n. n0' ≤ n ⇒ abs (f2 n) ≤ c' * abs (g2 n)’
+     (MP_TAC o Q.SPEC ‘n’)
+ >> rw []
+ >> Know ‘abs (f1 n + f2 n) ≤ c * abs (g1 n) + c' * abs (g2 n)’
+ >- (‘abs (f1 n + f2 n) ≤ abs (f1 n) + abs (f2 n)’ by rw [ABS_TRIANGLE] \\
+     Know ‘abs (f1 n) + abs (f2 n) ≤ c * abs (g1 n) + c' * abs (g2 n)’
+     >- (MATCH_MP_TAC REAL_LE_ADD2 \\
+         METIS_TAC []) \\
+     DISCH_TAC \\
+     METIS_TAC [REAL_LE_TRANS])
+ >> DISCH_TAC
+ >> Q.ABBREV_TAC ‘A = max (abs (g1 n)) (abs (g2 n))’
+ >> rw []
+ >> Know ‘c * abs (g1 n) + c' * abs (g2 n) ≤ abs A * (c + c')’
+ >- (‘abs (g1 n) ≤ A’ by METIS_TAC [Abbr ‘A’, REAL_LE_MAX1] \\
+     ‘abs (g2 n) ≤ A’ by METIS_TAC [Abbr ‘A’, REAL_LE_MAX2] \\
+     ‘c * abs (g1 n) ≤ c * A’ by simp [REAL_LE_LMUL] \\
+     ‘c' * abs (g2 n) ≤ c' * A’ by simp [REAL_LE_LMUL] \\
+     ‘0 ≤ abs (g1 n)’ by METIS_TAC [ABS_POS]\\
+     ‘0 ≤ A’ by METIS_TAC [REAL_LE_TRANS] \\
+     ‘A = abs A’ by rw [abs] \\
+     ‘c * abs (g1 n) + c' * abs (g2 n) ≤  c * A + c' * A’ by METIS_TAC [REAL_LE_ADD2] \\
+     ‘c * A + c' * A = A * (c + c')’ by rw [GSYM REAL_ADD_RDISTRIB] \\
+     METIS_TAC [])
+ >> DISCH_TAC
+ >> METIS_TAC [REAL_LE_TRANS]
+QED
+
 
 Theorem BigO_MUL_CONST:
     ∀f g k. k ≠ 0 ∧ BigO f g ⇒ BigO (λn. k * f n) g
 Proof
     rpt STRIP_TAC
-    >> FULL_SIMP_TAC std_ss [BigO_def]
-    >> qexistsl_tac [‘abs k * c’, ‘n0’]
-    >> CONJ_TAC
-    (* 0 < abs k * c *)
-    >- (‘0 < abs k’ by rw[ABS_NZ'] \\
-        METIS_TAC [REAL_LT_RMUL_0])
-    >> GEN_TAC
-    >> DISCH_TAC
-    >> Q.PAT_X_ASSUM ‘∀n. n0 ≤ n ⇒ abs (f n) ≤ c * abs (g n)’
-        (MP_TAC o Q.SPEC ‘n’)
-    >> rw[]
-    >> ‘abs (k * f n) = abs k * abs (f n)’ by METIS_TAC [ABS_MUL]
-    >> ‘0 < abs k’ by rw[ABS_NZ']
-    >> ‘abs k * abs (f n) ≤ abs k * c * abs (g n)’ by simp [GSYM REAL_LE_LMUL]
-    >> ‘abs k * c * abs (g n) = c * abs k * abs (g n)’ by rw [REAL_MUL_COMM]
-    >> simp[]
+ >> FULL_SIMP_TAC std_ss [BigO_def]
+ >> qexistsl_tac [‘abs k * c’, ‘n0’]
+ >> CONJ_TAC
+ (* 0 < abs k * c *)
+ >- (‘0 < abs k’ by rw [ABS_NZ'] \\
+     METIS_TAC [REAL_LT_RMUL_0])
+ >> GEN_TAC
+ >> DISCH_TAC
+ >> Q.PAT_X_ASSUM ‘∀n. n0 ≤ n ⇒ abs (f n) ≤ c * abs (g n)’
+    (MP_TAC o Q.SPEC ‘n’)
+ >> rw []
+ >> ‘abs (k * f n) = abs k * abs (f n)’ by METIS_TAC [ABS_MUL]
+ >> ‘0 < abs k’ by rw [ABS_NZ']
+ >> ‘abs k * abs (f n) ≤ abs k * c * abs (g n)’ by simp [GSYM REAL_LE_LMUL]
+ >> ‘abs k * c * abs (g n) = c * abs k * abs (g n)’ by rw [REAL_MUL_COMM]
+ >> simp []
 QED
 
 
