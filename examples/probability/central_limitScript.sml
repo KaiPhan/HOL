@@ -765,7 +765,6 @@ Proof
  >> METIS_TAC [REAL_LE_TRANS]
 QED
 
-
 Theorem BigO_MUL_CONST:
     ∀f g k. k ≠ 0 ∧ BigO f g ⇒ BigO (λn. k * f n) g
 Proof
@@ -790,17 +789,55 @@ QED
 
 Theorem BigO_SUM:
   ∀f g.
-        BigO f g ⇒ BigO (\n. sum (1, n) f) (\n. sum (1, n) g)
+        (∀n. BigO (f n) (g n)) ⇒
+         ∀n. BigO (λx. SIGMA (λi. f i x) (count n))
+        (\x. SIGMA (λi. abs(g i x)) (count n))
 Proof
-  rpt STRIP_TAC
-  >> FULL_SIMP_TAC std_ss [BigO_def]
-  >> qexistsl_tac [‘c’, ‘n0’]
-  >> rw[]
-  >> cheat
+    rw [BigO_def]
+ >> POP_ASSUM
+    (MP_TAC o Q.SPEC ‘n’)
+ >> STRIP_TAC
+ >> qexistsl_tac [‘c’, ‘n0’]
+ >> rw[]
+ >> Q.PAT_X_ASSUM ‘∀n'. n0 ≤ n' ⇒ abs (f n n') ≤ c * abs (g n n')’
+    (MP_TAC o Q.SPEC ‘x’)
+ >> rw[]
+ (*>> (MP_TAC o (Q.SPECL [‘λi. f i (x: num)’, ‘s’]) o
+            (INST_TYPE [alpha |-> “:num”])) REAL_SUM_IMAGE_ABS_TRIANGLE*)
+
+ >> (MP_TAC o (Q.SPECL [`λi. f i (x: num)`,`count n`]) o
+              (INST_TYPE [alpha |-> ``:num``])) REAL_SUM_IMAGE_ABS_TRIANGLE
+ >> rw []
+ >> Know ‘∑ (abs ∘ (λi. f i x)) (count n) ≤ ∑ (λi. abs (c * abs (g i x))) (count n)’
+ >- ((MP_TAC o (Q.SPECL [`count n`]) o
+      (INST_TYPE [alpha |-> ``:num``])) REAL_SUM_IMAGE_MONO \\
+     rw[] \\
+     POP_ASSUM (MP_TAC o Q.SPECL [‘λi. abs(f i (x: num))’,
+                                  ‘λi. abs(c * abs (g i (x: num)))’]) \\
+     BETA_TAC \\
+     rw [o_DEF] \\
+     cheat)
+ >> DISCH_TAC
+ >> Know ‘∑ (λi. abs (c * abs (g i x))) (count n) =  c * abs (∑ (λi. abs (g i x)) (count n))’
+ >- (‘∑ (λi. abs (c * abs (g i x))) (count n) =
+      ∑ (λi. abs c * abs (abs (g i x))) (count n)’ by rw [ABS_MUL] \\
+     ‘0 ≤ c’ by METIS_TAC [REAL_LT_IMP_LE] \\
+     ‘abs c = c’ by rw [ABS_REFL] \\
+     FULL_SIMP_TAC std_ss [] \\
+     Know ‘∑ (λi. c * abs (abs (g i x))) (count n) =
+           c * abs (∑ (λi. abs (g i x)) (count n))’
+     >- ((MP_TAC o (Q.SPECL [`count n`]) o
+                   (INST_TYPE [alpha |-> ``:num``])) REAL_SUM_IMAGE_CMUL \\
+         rw [] \\
+         DISJ2_TAC \\
+         (MP_TAC o (Q.SPECL [`λi. abs (g i (x: num))` ,`count n`]) o
+                   (INST_TYPE [alpha |-> ``:num``])) REAL_SUM_IMAGE_POS \\
+         rw []) \\
+     DISCH_TAC \\
+     METIS_TAC [REAL_LE_TRANS])
+ >> DISCH_TAC
+ >> METIS_TAC [REAL_LE_TRANS]
 QED
-
-
-
 
 Theorem central_limit:
   ∀p X Y N s b. prob_space p ∧
