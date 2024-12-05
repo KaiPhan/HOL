@@ -386,20 +386,6 @@ QED
 (* ------------------------------------------------------------------------- *)
 (*  Normal density                                                           *)
 (* ------------------------------------------------------------------------- *)
-
-Overload ext_normal_density = “\mu sig. Normal o normal_density mu sig o real”
-
-Definition normal_measure_def :
-    normal_measure mu sig s =
-    pos_fn_integral ext_lborel (\x. ext_normal_density mu sig x * indicator_fn s x)
-End
-
-Definition normal_rv_def :
-     normal_rv X p mu sig <=> real_random_variable X p /\
-                             !s. s IN subsets Borel ==>
-                                 distribution p X s = normal_measure mu sig s
-End
-
 Definition third_moment_def:
     third_moment p X = central_moment p X 3
 End
@@ -807,17 +793,7 @@ Proof
 
  >> (MP_TAC o (Q.SPECL [`λi. f i (x: num)`,`count n`]) o
               (INST_TYPE [alpha |-> ``:num``])) REAL_SUM_IMAGE_ABS_TRIANGLE
- >> rw []
- >> Know ‘∑ (abs ∘ (λi. f i x)) (count n) ≤ ∑ (λi. abs (c * abs (g i x))) (count n)’
- >- ((MP_TAC o (Q.SPECL [`count n`]) o
-      (INST_TYPE [alpha |-> ``:num``])) REAL_SUM_IMAGE_MONO \\
-     rw[] \\
-     POP_ASSUM (MP_TAC o Q.SPECL [‘λi. abs(f i (x: num))’,
-                                  ‘λi. abs(c * abs (g i (x: num)))’]) \\
-     BETA_TAC \\
-     rw [o_DEF] \\
-     cheat)
- >> DISCH_TAC
+ >> rw [o_DEF]
  >> Know ‘∑ (λi. abs (c * abs (g i x))) (count n) =  c * abs (∑ (λi. abs (g i x)) (count n))’
  >- (‘∑ (λi. abs (c * abs (g i x))) (count n) =
       ∑ (λi. abs c * abs (abs (g i x))) (count n)’ by rw [ABS_MUL] \\
@@ -825,19 +801,108 @@ Proof
      ‘abs c = c’ by rw [ABS_REFL] \\
      FULL_SIMP_TAC std_ss [] \\
      Know ‘∑ (λi. c * abs (abs (g i x))) (count n) =
-           c * abs (∑ (λi. abs (g i x)) (count n))’
+                  c * abs (∑ (λi. abs (g i x)) (count n))’
      >- ((MP_TAC o (Q.SPECL [`count n`]) o
                    (INST_TYPE [alpha |-> ``:num``])) REAL_SUM_IMAGE_CMUL \\
-         rw [] \\
-         DISJ2_TAC \\
+          rw [] \\
+          DISJ2_TAC \\
          (MP_TAC o (Q.SPECL [`λi. abs (g i (x: num))` ,`count n`]) o
                    (INST_TYPE [alpha |-> ``:num``])) REAL_SUM_IMAGE_POS \\
-         rw []) \\
+          rw []) \\
      DISCH_TAC \\
      METIS_TAC [REAL_LE_TRANS])
  >> DISCH_TAC
+ >> (MP_TAC o (Q.SPECL [`count n`]) o
+              (INST_TYPE [alpha |-> ``:num``])) REAL_SUM_IMAGE_MONO
+ >> rw []
+ >> POP_ASSUM (MP_TAC o Q.SPECL [‘λi. abs(f i (x: num))’,
+                                 ‘λi. abs(c * abs (g i (x: num)))’])
+ >> BETA_TAC
+ >> STRIP_TAC
+ >> Know ‘∀x'. x' < n ⇒ abs (f x' x) ≤ abs (c * abs (g x' x))’
+    >- (GEN_TAC \\
+        STRIP_TAC \\
+        ‘abs (c * abs (g x' x)) = abs c * abs (g x' x)’ by rw [ABS_MUL] \\
+        ‘0 ≤ c’ by METIS_TAC [REAL_LT_IMP_LE] \\
+        ‘abs c = c’ by rw [ABS_REFL] \\
+        FULL_SIMP_TAC std_ss [] \\
+     cheat
+       )
+ >> FULL_SIMP_TAC std_ss []
  >> METIS_TAC [REAL_LE_TRANS]
 QED
+
+(*
+Definition part_sum_def:
+  part_sum X Y (n:num) j = λn x.
+                                 if 1 ≤ j ∧ j ≤ n
+                                 then
+                                       ∑ (λi. if i < j
+                                              then Y i x
+                                              else X i x) (count1 n)
+                                 else 0
+End
+*)
+
+(* Treat j < 1 as no replacement and Treat j > n as full replacement *)
+Definition part_sum_def:
+  part_sum (X: num -> 'a -> real) (Y: num -> 'a -> real) (n:num) j =
+           λn x.
+                 if j < 1 then ∑ (λi. X i x) (count1 n)
+                 else if j > n then ∑ (λi. Y i x) (count1 n)
+                 else ∑ (λi. if i < j then Y i x else X i x) (count1 n)
+End
+
+(*
+Theorem Lindeberg_replacement:
+  ∀p (X: num -> 'a -> real) Y Z n j x.
+     prob_space p ∧
+     1 ≤ j ∧ j ≤ n ∧
+     (∀(i:num). random_variable (X i) p lborel) ∧
+     (∀i j. indep_vars p (X i) (X j) lborel lborel) ∧
+     (∀i. random_variable (Y i) p lborel) ∧
+     (∀i j. indep_vars p (Y i) (Y j) lborel lborel) ∧
+     (∀i j. indep_vars p (X i) (Y j) lborel lborel) ∧
+     (∀i. expectation p (X i) = expectation p (Y i)) ∧
+     (∀i. variance p (X i) = variance p (Y i)) ∧
+     Z = part_sum X Y n j ⇒
+     Y j x + Z j x = X (j + 1) x + Z (j + 1) x
+Proof
+  cheat
+QED
+*)
+
+(*
+Theorem TAYLOR_EXP:
+  ∀p X Y (diff: num -> real -> real) (M: real) f.
+     prob_space p ∧
+     random_variable X p borel ∧
+     random_variable Y p borel ∧
+     third_moment p (Normal o X) < PosInf ∧
+     Normal M = Normal (sup {abs (diff (3:num) x) | x | T}) ⇒
+     expectation p (f (λx. Y x + X x)) -
+     expectation p (Normal o (diff 1 (λx. Y x)))            ≤
+     Normal M / 6 * expectation p (abs o Normal o (λx. Y x pow 3))
+
+
+
+Proof
+QED
+
+*)
+
+Overload ext_normal_density = “\mu sig. Normal o normal_density mu sig o real”
+
+Definition normal_measure_def :
+  normal_measure mu sig s =
+  pos_fn_integral ext_lborel (\x. ext_normal_density mu sig x * indicator_fn s x)
+End
+
+Definition normal_rv_def :
+  normal_rv X p mu sig <=> real_random_variable X p /\
+                           !s. s IN subsets Borel ==>
+                               distribution p X s = normal_measure mu sig s
+End
 
 Theorem central_limit:
   ∀p X Y N s b. prob_space p ∧
@@ -857,10 +922,10 @@ Theorem central_limit:
                ((\n x. (SIGMA (λi. X i x) (count1 n)) / s n) --> N) (in_distribution p)
 Proof
      rpt STRIP_TAC
-  >> Q.ABBREV_TAC ‘Z = λn x. ∑ (λi. X i x) (count1 n) / s n’
+  >> Q.ABBREV_TAC ‘R = λn x. ∑ (λi. X i x) (count1 n) / s n’
   >> fs[normal_rv_def]
-  >> Know ‘∀i. real_random_variable (Z i) p’
-     >- (rw[Abbr ‘Z’]
+  >> Know ‘∀i. real_random_variable (R i) p’
+     >- (rw[Abbr ‘R’]
      >> Q.ABBREV_TAC ‘C = sqrt (second_moments p X i)’
      >> Cases_on ‘C = 0’
      >- (rw[Abbr ‘C’] \\
@@ -915,7 +980,7 @@ Proof
       >> rw[Abbr ‘D’]
 
       (*   ASM_REWRITE_TAC [] *)
-      >> FULL_SIMP_TAC std_ss [] (* unexpected return *)
+      >> FULL_SIMP_TAC std_ss []
 
       >> ‘∀x. real_random_variable (λx. Normal r * ∑ (λi. X i x) (count1 i)) p’ by
           rw [real_random_variable_cmul, real_random_variable_sum]
@@ -990,6 +1055,9 @@ Proof
      >> ‘∃c. X x = Normal c’ by METIS_TAC [extreal_cases]>> rw[]
      >> ‘∃d. Normal a * Normal c = Normal d’ by METIS_TAC [extreal_mul_eq] >> rw[]
      >> ‘∃e. Normal s * Normal d = Normal e’ by METIS_TAC [extreal_mul_eq] >> rw[]
+
+
+
      >> ‘∃f. Normal s * Normal b = Normal f’ by METIS_TAC [extreal_mul_eq] >> rw[exp_add]) >> Rewr'
  >> ‘∃g. exp (Normal s * Normal b) = Normal g’ by  METIS_TAC [extreal_mul_eq, normal_exp]
  >> rw[]
