@@ -779,49 +779,101 @@ Theorem BigO_SUM:
          ∀n. BigO (λx. SIGMA (λi. f i x) (count n))
         (\x. SIGMA (λi. abs(g i x)) (count n))
 Proof
-    rw [BigO_def]
- >> POP_ASSUM
-    (MP_TAC o Q.SPEC ‘n’)
- >> STRIP_TAC
- >> qexistsl_tac [‘c’, ‘n0’]
- >> rw[]
- >> Q.PAT_X_ASSUM ‘∀n'. n0 ≤ n' ⇒ abs (f n n') ≤ c * abs (g n n')’
-    (MP_TAC o Q.SPEC ‘x’)
- >> rw[]
- (*>> (MP_TAC o (Q.SPECL [‘λi. f i (x: num)’, ‘s’]) o
-            (INST_TYPE [alpha |-> “:num”])) REAL_SUM_IMAGE_ABS_TRIANGLE*)
 
- >> (MP_TAC o (Q.SPECL [`λi. f i (x: num)`,`count n`]) o
+  rw [BigO_def]
+  >> fs[SKOLEM_THM]
+  >> Cases_on ‘n’
+  >- (simp[] \\
+      Q.EXISTS_TAC ‘1’ \\
+      simp[])
+  >> Q.ABBREV_TAC ‘C = sup (IMAGE f' (count1 n'))’
+  >> Q.ABBREV_TAC ‘N = MAX_SET (IMAGE f'' (count1 n'))’
+  >> qexistsl_tac [‘C’, ‘N’]
+  >> sg ‘0 < C’
+     (* 0 < C *)
+  >- (simp [Abbr ‘C’] \\
+      MP_TAC (Q.SPECL [‘IMAGE f' (count1 n')’, ‘0’]
+              REAL_LT_SUP_FINITE) \\
+      rw [] \\
+      Q.EXISTS_TAC ‘f' n'’ \\
+      CONJ_ASM2_TAC
+      >- (Q.EXISTS_TAC ‘n'’ \\
+          simp []) \\
+      simp [])
+  >> simp []
+  >> GEN_TAC
+  >> STRIP_TAC
+  >> (MP_TAC o (Q.SPECL [`λi. f i (x: num)`,`count1 n'`]) o
               (INST_TYPE [alpha |-> ``:num``])) REAL_SUM_IMAGE_ABS_TRIANGLE
- >> rw [o_DEF]
- >> Know ‘∑ (λi. abs (c * abs (g i x))) (count n) =  c * abs (∑ (λi. abs (g i x)) (count n))’
- >- (‘∑ (λi. abs (c * abs (g i x))) (count n) =
-      ∑ (λi. abs c * abs (abs (g i x))) (count n)’ by rw [ABS_MUL] \\
-     ‘0 ≤ c’ by METIS_TAC [REAL_LT_IMP_LE] \\
-     ‘abs c = c’ by rw [ABS_REFL] \\
+  >> rw [o_DEF]
+
+ >> Know ‘∑ (λi. abs (C * abs (g i x))) (count1 n') = C * abs (∑ (λi. abs (g i x)) (count1 n'))’
+  >- (‘∑ (λi. abs (C * abs (g i x))) (count1 n') =
+       ∑ (λi. abs C * abs (abs (g i x))) (count1 n')’ by rw [ABS_MUL] \\
+     ‘0 ≤ C’ by METIS_TAC [REAL_LT_IMP_LE] \\
+     ‘abs C = C’ by rw [ABS_REFL] \\
      FULL_SIMP_TAC std_ss [] \\
-     Know ‘∑ (λi. c * abs (abs (g i x))) (count n) =
-                  c * abs (∑ (λi. abs (g i x)) (count n))’
-     >- ((MP_TAC o (Q.SPECL [`count n`]) o
+      Know ‘∑ (λi. C * abs (abs (g i x))) (count1 n') =
+            C * abs (∑ (λi. abs (g i x)) (count1 n'))’
+      >- ((MP_TAC o (Q.SPECL [`count1 n'`]) o
                    (INST_TYPE [alpha |-> ``:num``])) REAL_SUM_IMAGE_CMUL \\
           rw [] \\
           DISJ2_TAC \\
-         (MP_TAC o (Q.SPECL [`λi. abs (g i (x: num))` ,`count n`]) o
+          (MP_TAC o (Q.SPECL [`λi. abs (g i (x: num))` ,`count1 n'`]) o
                    (INST_TYPE [alpha |-> ``:num``])) REAL_SUM_IMAGE_POS \\
           rw []) \\
      DISCH_TAC \\
      METIS_TAC [REAL_LE_TRANS])
- >> DISCH_TAC
- >> (MP_TAC o (Q.SPECL [`count n`]) o
+    >> DISCH_TAC
+    >> MATCH_MP_TAC REAL_LE_TRANS
+  >> Q.EXISTS_TAC ‘∑ (λi. abs (f i x)) (count1 n')’
+  >> rw []
+  >> POP_ASSUM (rw o wrap o SYM)
+
+  >> Q.PAT_X_ASSUM ‘∀n. 0 < f' n ∧ ∀n'. f'' n ≤ n' ⇒
+                                        abs (f n n') ≤ f' n * abs (g n n')’
+      (MP_TAC o Q.SPEC ‘n’)
+  >> STRIP_TAC
+  >> POP_ASSUM (MP_TAC o Q.SPEC ‘N’)
+  >> STRIP_TAC
+  >> ‘f'' n ≤ N’ by cheat
+  >> FULL_SIMP_TAC std_ss []
+  >> Know ‘f' n * abs (g n N) ≤ C * abs (g n N)’
+  >- ( ‘f' n ≤ C’ by cheat \\
+       Cases_on ‘abs (g n N) = 0’
+       >- (METIS_TAC [REAL_MUL_RZERO, REAL_NEG_0, REAL_EQ_IMP_LE]) \\
+       ‘0 ≤ abs (g n N)’ by METIS_TAC [ABS_POS]  \\
+       ‘0 < abs (g n N)’ by METIS_TAC [REAL_LT_LE] \\
+       simp [GSYM REAL_LE_LMUL])
+  >> DISCH_TAC
+  >> ‘abs (f n N) ≤ C * abs (g n N)’ by METIS_TAC [REAL_LE_TRANS]
+  >> (MP_TAC o (Q.SPECL [`count1 n'`]) o
+             (INST_TYPE [alpha |-> ``:num``])) REAL_SUM_IMAGE_MONO
+  >> rw []
+  >> POP_ASSUM (MP_TAC o Q.SPECL [‘λn. abs (f (n: num) (N: num))’,
+                                  ‘λn. C * abs (g (n: num) (N: num))’])
+  >> BETA_TAC
+  >> STRIP_TAC
+  >> cheat
+
+
+(*
+  >> (MP_TAC o (Q.SPECL [`count1 n'`]) o
               (INST_TYPE [alpha |-> ``:num``])) REAL_SUM_IMAGE_MONO
- >> rw []
+  >> rw []
  >> POP_ASSUM (MP_TAC o Q.SPECL [‘λi. abs(f i (x: num))’,
-                                 ‘λi. abs(c * abs (g i (x: num)))’])
+                                 ‘λi. abs(C * abs (g i (x: num)))’])
  >> BETA_TAC
- >> STRIP_TAC
- >> Know ‘∀x'. x' < n ⇒ abs (f x' x) ≤ abs (c * abs (g x' x))’
-    >- (GEN_TAC \\
-        STRIP_TAC \\
+  >> STRIP_TAC
+
+  >> Know ‘∀x'. x' < SUC n' ⇒ abs (f x' x) ≤ abs (C * abs (g x' x))’
+  >- (Q.X_GEN_TAC ‘n'’ \\
+      STRIP_TAC \\
+      Q.PAT_X_ASSUM ‘∀n. 0 < f' n ∧ ∀n'. f'' n ≤ n' ⇒ abs (f n n') ≤ f' n * abs (g n n')’
+       (MP_TAC o Q.SPEC ‘n’) \\
+       STRIP_TAC \\
+      POP_ASSUM (MP_TAC o Q.SPEC ‘x’) \\
+      STRIP_TAC \\
         ‘abs (c * abs (g x' x)) = abs c * abs (g x' x)’ by rw [ABS_MUL] \\
         ‘0 ≤ c’ by METIS_TAC [REAL_LT_IMP_LE] \\
         ‘abs c = c’ by rw [ABS_REFL] \\
@@ -830,65 +882,87 @@ Proof
        )
  >> FULL_SIMP_TAC std_ss []
  >> METIS_TAC [REAL_LE_TRANS]
+ *)
 QED
 
-(*
-Definition part_sum_def:
-  part_sum X Y (n:num) j = λn x.
-                                 if 1 ≤ j ∧ j ≤ n
-                                 then
-                                       ∑ (λi. if i < j
-                                              then Y i x
-                                              else X i x) (count1 n)
-                                 else 0
-End
-*)
-
 (* Treat j < 1 as no replacement and Treat j > n as full replacement *)
-Definition part_sum_def:
-  part_sum (X: num -> 'a -> real) (Y: num -> 'a -> real) (n:num) j =
-           λn x.
+Definition partial_sum_def:
+  partial_sum (X: num -> 'a -> real) (Y: num -> 'a -> real) (n:num) j=
+           λx.
                  if j < 1 then ∑ (λi. X i x) (count1 n)
                  else if j > n then ∑ (λi. Y i x) (count1 n)
-                 else ∑ (λi. if i < j then Y i x else X i x) (count1 n)
+                 else ∑ (λi. Y i x) (count1 (j - 1)) + ∑ (λi. X i x) (count1 n DIFF (count1 j))
 End
 
 (*
-Theorem Lindeberg_replacement:
-  ∀p (X: num -> 'a -> real) Y Z n j x.
-     prob_space p ∧
-     1 ≤ j ∧ j ≤ n ∧
-     (∀(i:num). random_variable (X i) p lborel) ∧
-     (∀i j. indep_vars p (X i) (X j) lborel lborel) ∧
-     (∀i. random_variable (Y i) p lborel) ∧
-     (∀i j. indep_vars p (Y i) (Y j) lborel lborel) ∧
-     (∀i j. indep_vars p (X i) (Y j) lborel lborel) ∧
-     (∀i. expectation p (X i) = expectation p (Y i)) ∧
-     (∀i. variance p (X i) = variance p (Y i)) ∧
-     Z = part_sum X Y n j ⇒
-     Y j x + Z j x = X (j + 1) x + Z (j + 1) x
+Theorem partial_sum_telescoping':
+  ∀(X: num -> 'a -> real) Y Z (n:num) (j:num) x.
+    1 ≤ j ∧ j ≤ n  ∧
+    λj. Z j x = partial_sum X Y n j ⇒
+    Y j x + Z j x = X (j + 1) x + Z (j + 1) x
 Proof
   cheat
 QED
 *)
 
-(*
-Theorem TAYLOR_EXP:
-  ∀p X Y (diff: num -> real -> real) (M: real) f.
+(*count1 n DIFF count1 j = [j + 1 ,..., n]*)
+Theorem partial_sum_telescoping:
+  ∀(X: num -> 'a -> real) Y Z (n:num) (j:num) x.
+     1 ≤ j ∧ j ≤ n  ⇒
+     Y j x + ∑ (λi. Y i x) (count1 (j - 1)) + ∑ (λi. X i x) (count1 n DIFF (count1 j)) =
+     X (j + 1) x + ∑ (λi. Y i x) (count1 j) + ∑ (λi. X i x) (count1 n DIFF (count1 (j + 1)))
+Proof
+  rw[]
+  >> ‘X (j + 1) x + ∑ (λi. Y i x) (count1 j) +
+      ∑ (λi. X i x) (count1 n DIFF count1 (j + 1)) =
+      ∑ (λi. Y i x) (count1 j) + X (j + 1) x + ∑ (λi. X i x) (count1 n DIFF count1 (j + 1))’ by rw[REAL_ADD_COMM]
+  >> Know ‘X (j + 1) x + ∑ (λi. X i x) (count1 n DIFF count1 (j + 1)) =
+           ∑ (λi. X i x) (count1 n DIFF (count1 j))’
+  >- (‘X (j + 1) x =  ∑ (λi. X i x) {j + 1}’ by rw[REAL_SUM_IMAGE_SING] \\
+      cheat) (*REAL_SUM_IMAGE_DISJOINT_UNION*)
+
+  >> simp[GSYM REAL_ADD_ASSOC]
+  >> Know ‘Y j x + ∑ (λi. Y i x) (count1 (j − 1)) = ∑ (λi. Y i x) (count1 j)’
+  >- (cheat)
+  >> simp[REAL_ADD_ASSOC]
+QED
+
+ (*
+Theorem TAYLOR_EXP[local]:
+  ∀p X Y diff (M: extreal) f.
      prob_space p ∧
      random_variable X p borel ∧
      random_variable Y p borel ∧
      third_moment p (Normal o X) < PosInf ∧
-     Normal M = Normal (sup {abs (diff (3:num) x) | x | T}) ⇒
+     M = sup {abs (Normal (diff (3:num) x)) | x | T} ⇒
      expectation p (f (λx. Y x + X x)) -
-     expectation p (Normal o (diff 1 (λx. Y x)))            ≤
-     Normal M / 6 * expectation p (abs o Normal o (λx. Y x pow 3))
-
-
-
+     (expectation p (f (λx. Y x)) +
+     expectation p (λx. (Normal (diff 1 (Y x)))) * expectation p (f (λx. X x)) +
+     1 / 2 * expectation p (λx. (Normal (diff 2 (Y x)))) * expectation p (f (λx. (X x) powr 2))) ≤
+     M / 6 * expectation p (abs o Normal o (λx. Y x pow 3))
 Proof
-QED
+  rpt STRIP_TAC
+  >> Q.ABBREV_TAC ‘Z = expectation p (f (λx. Y x + X x)) −
+                       (expectation p (f (λx. Y x)) +
+                       expectation p (λx. diff 1 (Y x)) * expectation p (f (λx. X x)) +
+                       1 / 2 * expectation p (λx. diff 2 (Y x)) *
+                       expectation p (f (λx. X x powr 2)))’
+  >> Know ‘0 ≤ M’
+  >- (simp [sup_le] \\
+      rw[le_sup] \\
+      METIS_TAC [abs_pos, le_trans])
+  >> DISCH_TAC
+  >> ‘NegInf ≠ M’ by METIS_TAC [extreal_0_simps, lt_trans]
+  >> Cases_on ‘M = PosInf’
+  >- (METIS_TAC [extreal_le_def] \\
+      cheat)
+  >> ‘∃r. M = Normal r’ by METIS_TAC [extreal_cases]
+  >> rw[]
+  >> MP_TAC (Q.SPECL [‘diff’, ‘f’, ‘Y x’, ‘X x’, ‘r’]
+              TAYLOR_CLT_LEMMA)
+  >> cheat
 
+QED
 *)
 
 Overload ext_normal_density = “\mu sig. Normal o normal_density mu sig o real”
