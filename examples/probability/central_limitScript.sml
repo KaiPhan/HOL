@@ -779,110 +779,99 @@ Theorem BigO_SUM:
          ∀n. BigO (λx. SIGMA (λi. f i x) (count n))
         (\x. SIGMA (λi. abs(g i x)) (count n))
 Proof
-
-  rw [BigO_def]
-  >> fs[SKOLEM_THM]
-  >> Cases_on ‘n’
-  >- (simp[] \\
-      Q.EXISTS_TAC ‘1’ \\
-      simp[])
-  >> Q.ABBREV_TAC ‘C = sup (IMAGE f' (count1 n'))’
-  >> Q.ABBREV_TAC ‘N = MAX_SET (IMAGE f'' (count1 n'))’
-  >> qexistsl_tac [‘C’, ‘N’]
-  >> sg ‘0 < C’
-     (* 0 < C *)
-  >- (simp [Abbr ‘C’] \\
-      MP_TAC (Q.SPECL [‘IMAGE f' (count1 n')’, ‘0’]
-              REAL_LT_SUP_FINITE) \\
-      rw [] \\
-      Q.EXISTS_TAC ‘f' n'’ \\
-      CONJ_ASM2_TAC
-      >- (Q.EXISTS_TAC ‘n'’ \\
-          simp []) \\
-      simp [])
-  >> simp []
-  >> GEN_TAC
-  >> STRIP_TAC
-  >> (MP_TAC o (Q.SPECL [`λi. f i (x: num)`,`count1 n'`]) o
+    rw [BigO_def]
+ >> fs[SKOLEM_THM]
+ >> Cases_on ‘n’
+ >- (simp[] \\
+     Q.EXISTS_TAC ‘1’ \\
+     simp[])
+ >> Q.ABBREV_TAC ‘C = sup (IMAGE f' (count1 n'))’
+ >> Q.ABBREV_TAC ‘N = MAX_SET (IMAGE f'' (count1 n'))’
+ >> qexistsl_tac [‘C’, ‘N’]
+ >> sg ‘0 < C’
+    (* 0 < C *)
+ >- (simp [Abbr ‘C’] \\
+     MP_TAC (Q.SPECL [‘IMAGE f' (count1 n')’, ‘0’]
+             REAL_LT_SUP_FINITE) \\
+     rw [] \\
+     Q.EXISTS_TAC ‘f' n'’ \\
+     CONJ_ASM2_TAC
+     >- (Q.EXISTS_TAC ‘n'’ \\
+         simp []) \\
+     simp [])
+ >> simp []
+ >> GEN_TAC
+ >> STRIP_TAC
+ >> (MP_TAC o (Q.SPECL [`λi. f i (x: num)`,`count1 n'`]) o
               (INST_TYPE [alpha |-> ``:num``])) REAL_SUM_IMAGE_ABS_TRIANGLE
-  >> rw [o_DEF]
-
+ >> rw [o_DEF]
  >> Know ‘∑ (λi. abs (C * abs (g i x))) (count1 n') = C * abs (∑ (λi. abs (g i x)) (count1 n'))’
-  >- (‘∑ (λi. abs (C * abs (g i x))) (count1 n') =
-       ∑ (λi. abs C * abs (abs (g i x))) (count1 n')’ by rw [ABS_MUL] \\
+ >- (‘∑ (λi. abs (C * abs (g i x))) (count1 n') =
+      ∑ (λi. abs C * abs (abs (g i x))) (count1 n')’ by rw [ABS_MUL] \\
      ‘0 ≤ C’ by METIS_TAC [REAL_LT_IMP_LE] \\
      ‘abs C = C’ by rw [ABS_REFL] \\
      FULL_SIMP_TAC std_ss [] \\
-      Know ‘∑ (λi. C * abs (abs (g i x))) (count1 n') =
-            C * abs (∑ (λi. abs (g i x)) (count1 n'))’
-      >- ((MP_TAC o (Q.SPECL [`count1 n'`]) o
+     Know ‘∑ (λi. C * abs (abs (g i x))) (count1 n') =
+           C * abs (∑ (λi. abs (g i x)) (count1 n'))’
+     >- ((MP_TAC o (Q.SPECL [`count1 n'`]) o
                    (INST_TYPE [alpha |-> ``:num``])) REAL_SUM_IMAGE_CMUL \\
-          rw [] \\
-          DISJ2_TAC \\
-          (MP_TAC o (Q.SPECL [`λi. abs (g i (x: num))` ,`count1 n'`]) o
+         rw [] \\
+         DISJ2_TAC \\
+         (MP_TAC o (Q.SPECL [`λi. abs (g i (x: num))` ,`count1 n'`]) o
                    (INST_TYPE [alpha |-> ``:num``])) REAL_SUM_IMAGE_POS \\
-          rw []) \\
+         rw []) \\
      DISCH_TAC \\
      METIS_TAC [REAL_LE_TRANS])
-    >> DISCH_TAC
-    >> MATCH_MP_TAC REAL_LE_TRANS
+  >> DISCH_TAC
+  >> MATCH_MP_TAC REAL_LE_TRANS
   >> Q.EXISTS_TAC ‘∑ (λi. abs (f i x)) (count1 n')’
   >> rw []
   >> POP_ASSUM (rw o wrap o SYM)
-
-  >> Q.PAT_X_ASSUM ‘∀n. 0 < f' n ∧ ∀n'. f'' n ≤ n' ⇒
-                                        abs (f n n') ≤ f' n * abs (g n n')’
-      (MP_TAC o Q.SPEC ‘n’)
-  >> STRIP_TAC
-  >> POP_ASSUM (MP_TAC o Q.SPEC ‘N’)
-  >> STRIP_TAC
-  >> ‘f'' n ≤ N’ by cheat
-  >> FULL_SIMP_TAC std_ss []
-  >> Know ‘f' n * abs (g n N) ≤ C * abs (g n N)’
-  >- ( ‘f' n ≤ C’ by cheat \\
-       Cases_on ‘abs (g n N) = 0’
-       >- (METIS_TAC [REAL_MUL_RZERO, REAL_NEG_0, REAL_EQ_IMP_LE]) \\
-       ‘0 ≤ abs (g n N)’ by METIS_TAC [ABS_POS]  \\
-       ‘0 < abs (g n N)’ by METIS_TAC [REAL_LT_LE] \\
-       simp [GSYM REAL_LE_LMUL])
-  >> DISCH_TAC
-  >> ‘abs (f n N) ≤ C * abs (g n N)’ by METIS_TAC [REAL_LE_TRANS]
-  >> (MP_TAC o (Q.SPECL [`count1 n'`]) o
-             (INST_TYPE [alpha |-> ``:num``])) REAL_SUM_IMAGE_MONO
-  >> rw []
-  >> POP_ASSUM (MP_TAC o Q.SPECL [‘λn. abs (f (n: num) (N: num))’,
-                                  ‘λn. C * abs (g (n: num) (N: num))’])
-  >> BETA_TAC
-  >> STRIP_TAC
-  >> cheat
-
-
-(*
-  >> (MP_TAC o (Q.SPECL [`count1 n'`]) o
-              (INST_TYPE [alpha |-> ``:num``])) REAL_SUM_IMAGE_MONO
-  >> rw []
- >> POP_ASSUM (MP_TAC o Q.SPECL [‘λi. abs(f i (x: num))’,
-                                 ‘λi. abs(C * abs (g i (x: num)))’])
- >> BETA_TAC
-  >> STRIP_TAC
-
-  >> Know ‘∀x'. x' < SUC n' ⇒ abs (f x' x) ≤ abs (C * abs (g x' x))’
-  >- (Q.X_GEN_TAC ‘n'’ \\
+  >> irule REAL_SUM_IMAGE_MONO
+  >> CONJ_TAC
+  >- (Q.X_GEN_TAC ‘i’ \\
+      BETA_TAC \\
       STRIP_TAC \\
-      Q.PAT_X_ASSUM ‘∀n. 0 < f' n ∧ ∀n'. f'' n ≤ n' ⇒ abs (f n n') ≤ f' n * abs (g n n')’
-       (MP_TAC o Q.SPEC ‘n’) \\
-       STRIP_TAC \\
+      Q.PAT_X_ASSUM ‘∀n. 0 < f' n ∧ ∀n'. f'' n ≤ n' ⇒
+                                         abs (f n n') ≤ f' n * abs (g n n')’
+      (MP_TAC o Q.SPEC ‘i’) \\
+      STRIP_TAC \\
       POP_ASSUM (MP_TAC o Q.SPEC ‘x’) \\
       STRIP_TAC \\
-        ‘abs (c * abs (g x' x)) = abs c * abs (g x' x)’ by rw [ABS_MUL] \\
-        ‘0 ≤ c’ by METIS_TAC [REAL_LT_IMP_LE] \\
-        ‘abs c = c’ by rw [ABS_REFL] \\
-        FULL_SIMP_TAC std_ss [] \\
-     cheat
-       )
- >> FULL_SIMP_TAC std_ss []
- >> METIS_TAC [REAL_LE_TRANS]
- *)
+      sg ‘f'' i ≤ x’
+      >- (‘f'' i ≤ N’ by rw [Abbr ‘N’, in_max_set] \\
+          METIS_TAC [LE_TRANS]) \\
+      FULL_SIMP_TAC std_ss [] \\
+      Know ‘f' i * abs (g i x) ≤ abs (C * abs (g i x))’
+      >- (‘abs (C * abs (g i x)) = abs C * abs (g i x)’ by METIS_TAC [ABS_MUL, ABS_ABS] \\
+          ‘0 ≤ C’ by METIS_TAC [REAL_LT_IMP_LE] \\
+          ‘C = abs C’ by rw [abs] \\
+          POP_ASSUM (rw o wrap o SYM) \\
+          Know ‘f' i ≤ C’
+          >- (rw [Abbr ‘C’] \\
+             irule REAL_SUP_UBOUND_LE \\
+              sg ‘IMAGE f' (count1 n') (f' i)’
+              >- (simp [IMAGE_DEF] \\
+                  Q.EXISTS_TAC ‘i’ \\
+                  simp [] \\
+                  METIS_TAC [IN_COUNT]) \\
+              CONJ_TAC
+              >- (simp []) \\
+              CONJ_TAC
+              >- (Q.EXISTS_TAC ‘f' i’ \\
+                   simp []) \\
+              Q.EXISTS_TAC ‘sup (IMAGE f' (count1 n'))’ \\
+
+              (* ∀x. IMAGE f' (count1 n') x ⇒ x ≤ sup (IMAGE f' (count1 n')) *)
+              cheat) \\
+          DISCH_TAC \\
+          Cases_on ‘abs (g i x) = 0’
+          >- (METIS_TAC [REAL_MUL_RZERO, REAL_NEG_0, REAL_EQ_IMP_LE]) \\
+          ‘0 ≤ abs (g i x)’ by METIS_TAC [ABS_POS]  \\
+          ‘0 < abs (g i x)’ by METIS_TAC [REAL_LT_LE] \\
+          simp [GSYM REAL_LE_LMUL]) \\
+      METIS_TAC [REAL_LE_TRANS])
+  >> simp []
 QED
 
 (* Treat j < 1 as no replacement and Treat j > n as full replacement *)
