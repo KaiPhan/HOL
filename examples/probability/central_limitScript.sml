@@ -874,46 +874,68 @@ Proof
   >> simp []
 QED
 
-(* Treat j < 1 as no replacement and Treat j > n as full replacement *)
-Definition partial_sum_def:
-  partial_sum (X: num -> 'a -> real) (Y: num -> 'a -> real) (n:num) j=
-           λx.
-                 if j < 1 then ∑ (λi. X i x) (count1 n)
-                 else if j > n then ∑ (λi. Y i x) (count1 n)
-                 else ∑ (λi. Y i x) (count1 (j - 1)) + ∑ (λi. X i x) (count1 n DIFF (count1 j))
-End
-
-(*
-Theorem partial_sum_telescoping':
-  ∀(X: num -> 'a -> real) Y Z (n:num) (j:num) x.
-    1 ≤ j ∧ j ≤ n  ∧
-    λj. Z j x = partial_sum X Y n j ⇒
-    Y j x + Z j x = X (j + 1) x + Z (j + 1) x
-Proof
-  cheat
-QED
-*)
-
-(*count1 n DIFF count1 j = [j + 1 ,..., n]*)
 Theorem partial_sum_telescoping:
-  ∀(X: num -> 'a -> real) Y Z (n:num) (j:num) x.
-     1 ≤ j ∧ j ≤ n  ⇒
-     Y j x + ∑ (λi. Y i x) (count1 (j - 1)) + ∑ (λi. X i x) (count1 n DIFF (count1 j)) =
-     X (j + 1) x + ∑ (λi. Y i x) (count1 j) + ∑ (λi. X i x) (count1 n DIFF (count1 (j + 1)))
+  ∀(X: num -> 'a -> real) Y (Z: num -> 'a -> real) (n:num) (j:num) x.
+      1 ≤ j ∧ j ≤ n ∧
+      (∀j. Z j x = ∑ (λi. Y i x) {1 .. (j - 1)} +
+                   ∑ (λi. X i x) {(j + 1) .. n}) ⇒
+      Y j x + Z j x = X (j + 1) x + Z (j + 1) x
 Proof
-  rw[]
-  >> ‘X (j + 1) x + ∑ (λi. Y i x) (count1 j) +
-      ∑ (λi. X i x) (count1 n DIFF count1 (j + 1)) =
-      ∑ (λi. Y i x) (count1 j) + X (j + 1) x + ∑ (λi. X i x) (count1 n DIFF count1 (j + 1))’ by rw[REAL_ADD_COMM]
-  >> Know ‘X (j + 1) x + ∑ (λi. X i x) (count1 n DIFF count1 (j + 1)) =
-           ∑ (λi. X i x) (count1 n DIFF (count1 j))’
-  >- (‘X (j + 1) x =  ∑ (λi. X i x) {j + 1}’ by rw[REAL_SUM_IMAGE_SING] \\
-      cheat) (*REAL_SUM_IMAGE_DISJOINT_UNION*)
-
-  >> simp[GSYM REAL_ADD_ASSOC]
-  >> Know ‘Y j x + ∑ (λi. Y i x) (count1 (j − 1)) = ∑ (λi. Y i x) (count1 j)’
-  >- (cheat)
-  >> simp[REAL_ADD_ASSOC]
+    rw []
+ >> ‘Y j x + (∑ (λi. Y i x) {1 .. j − 1} + ∑ (λi. X i x) {j + 1 .. n}) =
+     Y j x + ∑ (λi. Y i x) {1 .. j − 1} + ∑ (λi. X i x) {j + 1 .. n}’ by rw [REAL_ADD_ASSOC]
+ >> POP_ORW
+ >> simp []
+ >> Know ‘Y j x + ∑ (λi. Y i x) {1 .. (j - 1)} = ∑ (λi. Y i x) {1 .. j}’
+ >- (‘Y j x =  ∑ (λi. Y i x) {j}’ by rw[REAL_SUM_IMAGE_SING] \\
+     (MP_TAC o (Q.SPECL [`{j}` ,`{1 .. j − 1}`]) o
+               (INST_TYPE [alpha |-> ``:num``])) REAL_SUM_IMAGE_DISJOINT_UNION \\
+     impl_tac
+     >- (CONJ_TAC
+         >- (simp []) \\
+         CONJ_TAC
+         >- (simp [FINITE_NUMSEG]) \\
+         simp [DISJOINT_NUMSEG]) \\
+     DISCH_TAC \\
+     POP_ASSUM (MP_TAC o Q.SPEC ‘λi. Y i x’) \\
+     STRIP_TAC \\
+     ‘{j} ∪ {1 .. j − 1} = {1 .. j}’ by rw [Once EXTENSION] \\
+     FULL_SIMP_TAC std_ss [])
+ >> DISCH_TAC
+ >> POP_ORW
+ >> simp []
+ >> ‘X (j + 1) x + (∑ (λi. Y i x) {1 .. j} + ∑ (λi. X i x) {j + 2 .. n}) =
+     X (j + 1) x + ∑ (λi. Y i x) {1 .. j} + ∑ (λi. X i x) {j + 2 .. n}’ by rw [REAL_ADD_ASSOC]
+ >> POP_ORW
+ >> ‘X (j + 1) x + ∑ (λi. Y i x) {1 .. j} + ∑ (λi. X i x) {j + 2 .. n} =
+     ∑ (λi. Y i x) {1 .. j} + X (j + 1) x  + ∑ (λi. X i x) {j + 2 .. n}’ by rw [REAL_ADD_COMM]
+ >> Know ‘X (j + 1) x  + ∑ (λi. X i x) {j + 2 .. n} =  ∑ (λi. X i x) {j + 1 .. n}’
+ >- (‘X (j + 1) x =  ∑ (λi. X i x) {j + 1}’ by rw[REAL_SUM_IMAGE_SING] \\
+     (MP_TAC o (Q.SPECL [`{j + 1}` ,`{(j + 2) .. n}`]) o
+               (INST_TYPE [alpha |-> ``:num``])) REAL_SUM_IMAGE_DISJOINT_UNION \\
+     impl_tac
+     >- (CONJ_TAC
+         >- (simp []) \\
+         CONJ_TAC
+         >- (simp [FINITE_NUMSEG]) \\
+         simp [DISJOINT_NUMSEG])\\
+     DISCH_TAC \\
+     POP_ASSUM (MP_TAC o Q.SPEC ‘λi. X i x’) \\
+     STRIP_TAC \\
+     Know ‘{j + 1} ∪ {(j + 2) .. n} = {j + 1 .. n}’
+     >- (‘j + 1 ≤ j + 2’ by RW_TAC arith_ss [] \\
+         (MP_TAC o (Q.SPECL [`j + 1` ,`j + 1`, `n - (j + 1)`]) o
+                   (INST_TYPE [alpha |-> ``:num``])) NUMSEG_ADD_SPLIT \\
+         simp [] \\
+         ‘{j + 1 .. j + 1} =  {j + 1}’ by rw [NUMSEG_SING] \\
+         ‘j + 1 ≤ n’ by cheat  \\
+         ‘j + 1 + (n − (j + 1)) = n’ by RW_TAC arith_ss [LESS_EQ_ADD_SUB] \\
+         simp []) \\
+     DISCH_TAC \\
+     FULL_SIMP_TAC std_ss [])
+ >> DISCH_TAC
+ >> POP_ASSUM (rw o wrap o SYM)
+ >> simp [REAL_ADD_ASSOC]
 QED
 
  (*
