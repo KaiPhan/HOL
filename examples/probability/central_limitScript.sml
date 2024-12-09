@@ -877,11 +877,12 @@ QED
 Theorem partial_sum_telescoping:
   ∀(X: num -> 'a -> real) Y (Z: num -> 'a -> real) (n:num) (j:num) x.
       1 ≤ j ∧ j ≤ n ∧
+      j + 1 ≤ n ∧
       (∀j. Z j x = ∑ (λi. Y i x) {1 .. (j - 1)} +
                    ∑ (λi. X i x) {(j + 1) .. n}) ⇒
       Y j x + Z j x = X (j + 1) x + Z (j + 1) x
 Proof
-    rw []
+     rw []
  >> ‘Y j x + (∑ (λi. Y i x) {1 .. j − 1} + ∑ (λi. X i x) {j + 1 .. n}) =
      Y j x + ∑ (λi. Y i x) {1 .. j − 1} + ∑ (λi. X i x) {j + 1 .. n}’ by rw [REAL_ADD_ASSOC]
  >> POP_ORW
@@ -917,6 +918,7 @@ Proof
      >- (CONJ_TAC
          >- (simp []) \\
          CONJ_TAC
+
          >- (simp [FINITE_NUMSEG]) \\
          simp [DISJOINT_NUMSEG])\\
      DISCH_TAC \\
@@ -928,7 +930,7 @@ Proof
                    (INST_TYPE [alpha |-> ``:num``])) NUMSEG_ADD_SPLIT \\
          simp [] \\
          ‘{j + 1 .. j + 1} =  {j + 1}’ by rw [NUMSEG_SING] \\
-         ‘j + 1 ≤ n’ by cheat  \\
+         RW_TAC arith_ss [GSYM NUMSEG_LREC, SUM_CLAUSES, FINITE_NUMSEG, IN_NUMSEG] \\
          ‘j + 1 + (n − (j + 1)) = n’ by RW_TAC arith_ss [LESS_EQ_ADD_SUB] \\
          simp []) \\
      DISCH_TAC \\
