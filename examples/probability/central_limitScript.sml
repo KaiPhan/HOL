@@ -349,7 +349,7 @@ Proof
             (expectation p (Normal ∘ f ∘ real ∘ Y n),
              expectation p (Normal ∘ f ∘ real ∘ B)) < e *)
  >- (Q.PAT_X_ASSUM ‘ ∀f. bounded (IMAGE f 𝕌(:real)) ∧ f continuous_on 𝕌(:real)
-                        ==> P’ (MP_TAC o (Q.SPEC ‘f’)) >> rw []
+                         ==> P’ (MP_TAC o (Q.SPEC ‘f’)) >> rw []
  >> POP_ASSUM (MP_TAC o (Q.SPEC ‘e’)) >> rw []
  >> Q.EXISTS_TAC ‘MAX N m’ >> rw [MAX_LE]
  >> sg ‘expectation p (Normal ∘ f ∘ real ∘ Y n) =
@@ -514,15 +514,14 @@ Proof
  >> simp []
 QED
 
-
 Theorem TAYLOR_CLT_LEMMA:
   ∀diff (f:real -> real) x y M.
-                              0 < y ∧ diff (0:num) = f ∧
-                              (∀m t.  m < 3 ∧ x ≤ t ∧ t ≤ x + y ⇒ (diff m diffl diff (SUC m) t) t) ∧
-                              (∃z. ∀x. abs (diff 3 x) ≤ z) ∧
-                              M = sup {abs (diff 3 x) | x | T} ⇒
-                              abs (f (x + y) - (f x + diff 1 x * y + diff 2 x / 2 * y pow 2)) ≤
-                              M / 6 * abs y pow 3
+                                0 < y ∧ diff (0:num) = f ∧
+                                (∀m t.  m < 3 ∧ x ≤ t ∧ t ≤ x + y ⇒ (diff m diffl diff (SUC m) t) t) ∧
+                                (∃z. ∀x. abs (diff 3 x) ≤ z) ∧
+                                M = sup {abs (diff 3 x) | x | T} ⇒
+                                abs (f (x + y) - (f x + diff 1 x * y + diff 2 x / 2 * y pow 2)) ≤
+                                M / 6 * abs y pow 3
 Proof
     rpt GEN_TAC
  >> STRIP_TAC
@@ -832,6 +831,7 @@ Proof
   >- (Q.X_GEN_TAC ‘i’ \\
       BETA_TAC \\
       STRIP_TAC \\
+      simp [] \\
       Q.PAT_X_ASSUM ‘∀n. 0 < f' n ∧ ∀n'. f'' n ≤ n' ⇒
                                          abs (f n n') ≤ f' n * abs (g n n')’
       (MP_TAC o Q.SPEC ‘i’) \\
@@ -849,21 +849,14 @@ Proof
           POP_ASSUM (rw o wrap o SYM) \\
           Know ‘f' i ≤ C’
           >- (rw [Abbr ‘C’] \\
-             irule REAL_SUP_UBOUND_LE \\
-              sg ‘IMAGE f' (count1 n') (f' i)’
-              >- (simp [IMAGE_DEF] \\
-                  Q.EXISTS_TAC ‘i’ \\
-                  simp [] \\
-                  METIS_TAC [IN_COUNT]) \\
-              CONJ_TAC
-              >- (simp []) \\
-              CONJ_TAC
-              >- (Q.EXISTS_TAC ‘f' i’ \\
-                   simp []) \\
-              Q.EXISTS_TAC ‘sup (IMAGE f' (count1 n'))’ \\
-
-              (* ∀x. IMAGE f' (count1 n') x ⇒ x ≤ sup (IMAGE f' (count1 n')) *)
-              cheat) \\
+              irule REAL_SUP_UBOUND_LE' \\
+              CONJ_ASM2_TAC
+              (*  ∃z. ∀x. x ∈ IMAGE f' (count1 n') ⇒ x ≤ z  *)
+              >- (Q.EXISTS_TAC ‘sup (IMAGE f' (count1 n'))’ \\
+                  FULL_SIMP_TAC std_ss [] \\
+                  (* ∀x. x ∈ IMAGE f' (count1 n') ⇒ x ≤ sup (IMAGE f' (count1 n')) *)
+                  cheat) \\
+              simp []) \\
           DISCH_TAC \\
           Cases_on ‘abs (g i x) = 0’
           >- (METIS_TAC [REAL_MUL_RZERO, REAL_NEG_0, REAL_EQ_IMP_LE]) \\
@@ -918,7 +911,6 @@ Proof
      >- (CONJ_TAC
          >- (simp []) \\
          CONJ_TAC
-
          >- (simp [FINITE_NUMSEG]) \\
          simp [DISJOINT_NUMSEG])\\
      DISCH_TAC \\
@@ -940,7 +932,51 @@ Proof
  >> simp [REAL_ADD_ASSOC]
 QED
 
- (*
+Theorem expectation_linear:
+  ∀p X Y.
+          prob_space p ∧
+          real_random_variable X p ∧
+          integrable p X ∧
+          real_random_variable Y p ∧
+          integrable p Y ⇒
+          expectation p (λx. X x + Y x) = expectation p X + expectation p Y
+Proof
+  rw [expectation_def, prob_space_def, real_random_variable_def, p_space_def]
+  >> MATCH_MP_TAC integral_add
+  >> simp []
+QED
+
+Theorem expectation_linear':
+  ∀p X Y.
+    prob_space p ∧
+    random_variable X p borel ∧
+    integrable p (Normal o X) ∧
+    random_variable Y p borel ∧
+    integrable p (Normal o Y) ⇒
+    expectation p (Normal o (λx. X x + Y x)) = expectation p (Normal o X) + expectation p (Normal o Y)
+Proof
+  rw []
+  >> MP_TAC (Q.SPECL [‘p’, ‘Normal o X’, ‘Normal o Y’]
+              expectation_linear)
+  >> simp []
+  >> STRIP_TAC
+  >> Know ‘expectation p (λx. Normal (X x) + Normal (Y x)) =
+           expectation p (Normal ∘ (λx. X x + Y x))’
+  >- (MATCH_MP_TAC expectation_cong \\
+      rw[extreal_add_eq])
+  >> DISCH_TAC
+  >> FULL_SIMP_TAC std_ss [integrable_def]
+  >> Know ‘real_random_variable (Normal ∘ X) p’
+  >- (rw [real_random_variable_def, random_variable_def] \\
+      (* Normal ∘ X ∈ Borel_measurable (p_space p,events p) *)
+      cheat)
+  >> Know ‘real_random_variable (Normal ∘ Y) p’
+  >- (rw [real_random_variable_def, random_variable_def] \\
+      cheat)
+  >> FULL_SIMP_TAC std_ss []
+QED
+
+(*
 Theorem TAYLOR_EXP[local]:
   ∀p X Y diff (M: extreal) f.
      prob_space p ∧
@@ -955,11 +991,10 @@ Theorem TAYLOR_EXP[local]:
      M / 6 * expectation p (abs o Normal o (λx. Y x pow 3))
 Proof
   rpt STRIP_TAC
-  >> Q.ABBREV_TAC ‘Z = expectation p (f (λx. Y x + X x)) −
+  >> Q.ABBREV_TAC ‘Z = expectation p (f (λx. Y x + X x)) -
                        (expectation p (f (λx. Y x)) +
-                       expectation p (λx. diff 1 (Y x)) * expectation p (f (λx. X x)) +
-                       1 / 2 * expectation p (λx. diff 2 (Y x)) *
-                       expectation p (f (λx. X x powr 2)))’
+                        expectation p (λx. (Normal (diff 1 (Y x)))) * expectation p (f (λx. X x)) +
+                        1 / 2 * expectation p (λx. (Normal (diff 2 (Y x)))) * expectation p (f (λx. (X x) powr 2)))’
   >> Know ‘0 ≤ M’
   >- (simp [sup_le] \\
       rw[le_sup] \\
@@ -967,8 +1002,9 @@ Proof
   >> DISCH_TAC
   >> ‘NegInf ≠ M’ by METIS_TAC [extreal_0_simps, lt_trans]
   >> Cases_on ‘M = PosInf’
-  >- (METIS_TAC [extreal_le_def] \\
-      cheat)
+  >- (‘M / 6 = PosInf’ by cheat \\
+      ‘M / 6 * expectation p (abs ∘ Normal ∘ (λx. (Y x)³)) = PosInf’ by cheat \\
+      simp [infty_div])
   >> ‘∃r. M = Normal r’ by METIS_TAC [extreal_cases]
   >> rw[]
   >> MP_TAC (Q.SPECL [‘diff’, ‘f’, ‘Y x’, ‘X x’, ‘r’]
