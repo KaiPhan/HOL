@@ -405,214 +405,6 @@ End
 
 (* ------------------------------------------------------------------------- *)
 
-Theorem TAYLOR_REMAINDER:
-  ∀(diff:num -> real -> real) n (x:real). ∃M t.
-                                                abs (diff n t) ≤ M ⇒
-                     abs (diff n t / (&FACT n:real) * x pow n) ≤ M / &FACT n * abs (x) pow n
-Proof
-    rpt GEN_TAC
-    >> qexistsl [‘M’, ‘t’]
-    >> STRIP_TAC
-    >> ‘diff n t / &FACT n = diff n t * (&FACT n)⁻¹’ by METIS_TAC [real_div]
-    >> POP_ORW
-    >> ‘M / &FACT n =  M * (&FACT n)⁻¹’ by METIS_TAC [real_div]
-    >> POP_ORW
-    >> ‘!n. &0 < (&FACT n:real)’ by rw [REAL_LT, FACT_LESS]
-    >> POP_ASSUM (MP_TAC o Q.SPEC ‘n’)
-    >> DISCH_TAC
-    >> ‘0 <= (&FACT n: real)’ by METIS_TAC [REAL_LT_IMP_LE]
-    >> ‘&0 < (inv(&FACT n):real)’ by  METIS_TAC [REAL_INV_POS]
-    >> ‘abs (diff n t) * inv(&FACT n) ≤ M  * inv(&FACT n)’ by
-        METIS_TAC [REAL_LE_RMUL]
-    >> ‘abs (inv(&FACT n:real)) = inv(&FACT n)’ by rw[ABS_REFL]
-    >> ‘abs (diff n t) * abs (&FACT n)⁻¹ = abs (diff n t) * (&FACT n)⁻¹’ by rw []
-    >> ‘abs (diff n t) * abs (&FACT n)⁻¹ = abs (diff n t * (&FACT n)⁻¹)’ by METIS_TAC [ABS_MUL]
-    >> ‘abs (diff n t * (&FACT n)⁻¹) ≤ M  * inv(&FACT n)’ by METIS_TAC []
-    >> ‘0 ≤ abs (x pow n)’ by METIS_TAC [REAL_ABS_POS]
-    >> Cases_on ‘x pow n = 0’
-    >- (‘x = 0’ by METIS_TAC [POW_ZERO] \\
-        ‘abs x pow n = abs (x pow n)’ by rw [POW_ABS] \\
-        ‘abs (x pow n) = 0’ by METIS_TAC [REAL_ABS_0] \\
-        ‘diff n t * (&FACT n)⁻¹ * x pow n = 0’ by METIS_TAC [REAL_MUL_RZERO] \\
-        ‘M * (&FACT n)⁻¹ * abs x pow n = 0’ by METIS_TAC [REAL_MUL_RZERO] \\
-        METIS_TAC [])
-    >> ‘0 < abs (x pow n)’ by METIS_TAC [ABS_NZ]
-    >> ‘abs (diff n t * (&FACT n)⁻¹) * abs (x pow n) ≤ M * (&FACT n)⁻¹ * abs (x pow n)’ by
-        METIS_TAC [REAL_LE_RMUL]
-    >> ‘abs (diff n t * (&FACT n)⁻¹) * abs (x pow n) = abs (diff n t * (&FACT n)⁻¹ * x pow n)’ by
-        METIS_TAC [GSYM ABS_MUL]
-    >> FULL_SIMP_TAC std_ss []
-    >> ‘abs (x pow n) = (abs x) pow n’ by METIS_TAC [POW_ABS]
-    >> FULL_SIMP_TAC std_ss []
-QED
-
-Theorem TAYLOR_THEOREM:
-    ∀f diff a x n.
-                   a < x ∧ 0 < n ∧ diff 0 = f ∧
-                  (∀m t. m < n ∧ a ≤ t ∧ t ≤ x ⇒ (diff m diffl diff (SUC m) t) t) ⇒
-                     ∃t. a < t ∧ t < x ∧
-                         f x =
-                               sum (0,n) (λm. diff m a / &FACT m * (x − a) pow m) +
-                               diff n t / &FACT n * (x − a) pow n
-Proof
-    rpt STRIP_TAC
- >> Q.ABBREV_TAC ‘g = λx. f (x + a)’
- >> ‘∀x. g x = f (x + a)’ by rw [Abbr ‘g’]
- >> POP_ASSUM (MP_TAC o Q.SPEC ‘x - a’)
- >> ‘f (x - a + a) = f x’ by METIS_TAC [REAL_SUB_ADD]
- >> POP_ORW
- >> DISCH_TAC
- >> Q.ABBREV_TAC ‘diff' = \n x. diff n (x + a)’
- >> MP_TAC (Q.SPECL [‘g’, ‘diff'’, ‘x - a’, ‘n’] MCLAURIN)
- >> impl_tac
- >- (CONJ_TAC
-    (* 0 < x − a *)
-     >- (rw [REAL_SUB_LT])
-     >> CONJ_TAC
-    (* 0 < n *)
-     >> fs []
-     >> CONJ_TAC
-    (* diff' 0 = g *)
-     >- (rw [Abbr ‘diff'’])
-     (* ∀m t. m < n ∧ 0 ≤ t ∧ t ≤ x − a ⇒ (diff' m diffl diff' (SUC m) t) t *)
-     >> Q.UNABBREV_TAC ‘diff'’
-     >> BETA_TAC
-     >> qx_genl_tac [‘m’, ‘t’]
-     >> STRIP_TAC
-     >> ‘a ≤ t + a’ by rw [REAL_LE_ADDL]
-     >> ‘t + a ≤ x’ by METIS_TAC [REAL_LE_SUB_LADD]
-     >> Q.PAT_X_ASSUM ‘∀m t. m < n ∧ a ≤ t ∧ t ≤ x ⇒
-                             (diff m diffl diff (SUC m) t) t’
-       (MP_TAC o Q.SPECL [‘m’, ‘t + a’])
-     >> DISCH_TAC
-     >> MP_TAC (Q.SPECL [‘diff (m:num)’, ‘λx. (x + a)’, ‘diff (SUC m) (t + a:real)’, ‘1’, ‘t’] DIFF_CHAIN)
-     >> impl_tac
-     >- (CONJ_TAC
-         >- (BETA_TAC \\
-             METIS_TAC [])
-         (* ((λx. x + a) diffl 1) t *)
-         >> Know ‘((λx. x + a) diffl (1 + 0)) t’
-         >- (MP_TAC (Q.SPECL [‘λx. x’, ‘λx. a’, ‘1’, ‘0’, ‘t’] DIFF_ADD) \\
-             impl_tac \\
-             METIS_TAC [DIFF_X, DIFF_CONST] \\
-             BETA_TAC \\
-             simp [])
-         >> simp [REAL_ADD_RID])
-         >> simp [])
- >> simp[]
- >> DISCH_THEN (Q.X_CHOOSE_TAC ‘t’)
- >> Q.EXISTS_TAC ‘t + a’
- >> CONJ_TAC
- >- (rw [REAL_LT_ADDL])
- >> CONJ_TAC
- >- (rw [REAL_LT_ADD_SUB])
- >> Know ‘∀m. diff' m 0 = diff m a’
-    >- (Q.UNABBREV_TAC ‘diff'’ \\
-        BETA_TAC \\
-        simp [])
- >> DISCH_TAC
- >> simp []
-QED
-
-Theorem TAYLOR_CLT_LEMMA:
-  ∀diff (f:real -> real) x y M.
-                                0 < y ∧ diff (0:num) = f ∧
-                                (∀m t.  m < 3 ∧ x ≤ t ∧ t ≤ x + y ⇒ (diff m diffl diff (SUC m) t) t) ∧
-                                (∃z. ∀x. abs (diff 3 x) ≤ z) ∧
-                                M = sup {abs (diff 3 x) | x | T} ⇒
-                                abs (f (x + y) - (f x + diff 1 x * y + diff 2 x / 2 * y pow 2)) ≤
-                                M / 6 * abs y pow 3
-Proof
-    rpt GEN_TAC
- >> STRIP_TAC
- >> MP_TAC (Q.SPECL [‘f’, ‘diff’, ‘x’, ‘x + y’, ‘3’] TAYLOR_THEOREM)
- >> simp []
- >> DISCH_THEN (Q.X_CHOOSE_THEN ‘t’ STRIP_ASSUME_TAC)
- >> ‘x + y − x = y’ by rw [REAL_ADD_SUB]
- >> FULL_SIMP_TAC std_ss []
- >> Know ‘sum (0,3) (λm. diff m x / &FACT m * y pow m) =
-           (f x + diff 1 x * y + diff 2 x / 2 * y²)’
- >- (EVAL_TAC \\
-     simp [])
- >> fs []
- >> DISCH_TAC
- >> Q.ABBREV_TAC ‘Z = f x + diff 1 x * y + diff 2 x / 2 * y²’
- >> fs []
- >> ‘Z + y³ * (&FACT 3)⁻¹ * diff 3 t − Z =   y³ * (&FACT 3)⁻¹ * diff 3 t’ by rw [REAL_ADD_SUB]
- >> POP_ORW
- >> Q.UNABBREV_TAC ‘Z’
- >> ‘inv(&FACT 3) = (inv(6):real)’ by EVAL_TAC
- >> POP_ORW
- >> simp []
- >> ‘abs (1 / 6 * (y³ * diff 3 t)) = abs (1/6) * abs (y³ * diff 3 t)’ by rw [ABS_MUL]
- >> POP_ORW
- >> ‘6 * (abs (1 / 6) * abs (y³ * diff 3 t)) = abs (y³ * diff 3 t)’
-     by rw [GSYM REAL_MUL_ASSOC, ABS_REFL, REAL_MUL_RINV, REAL_MUL_RID]
- >> POP_ORW
- >> ‘abs (y³ * diff 3 t) = abs (y³) * abs (diff 3 t)’ by rw [ABS_MUL]
- >> POP_ORW
- >> ‘abs (y pow 3) = abs y pow 3’ by METIS_TAC [POW_ABS]
- >> POP_ORW
- >> MATCH_MP_TAC REAL_LE_LMUL1
- >> CONJ_TAC
- >- (METIS_TAC [ABS_POS, POW_POS])
- >> irule REAL_SUP_UBOUND_LE
- >> CONJ_TAC
- >- (ONCE_REWRITE_TAC [GSYM SPECIFICATION]\\
-     simp [] \\
-     qexists ‘t’ \\
-     rw [])
- >> CONJ_TAC
- >- (qexists ‘abs (diff 3 0)’ \\
-     ONCE_REWRITE_TAC [GSYM SPECIFICATION]\\
-     simp [] \\
-     qexists ‘0’ \\
-     rw [])
- >> qexists ‘z’
- >> GEN_TAC
- >> Know ‘{abs (diff 3 x) | x | T} x' ⇔ x' IN {abs (diff 3 x) | x | T}’
- >- (REWRITE_TAC [SPECIFICATION]) >> Rewr'
- >> simp []
- >> STRIP_TAC
- >> rw []
-QED
-
-Theorem normal_absolute_third_moment:
-    ∀p X sig. normal_rv X p 0 sig ⇒
-              absolute_third_moment p X = sqrt (8 / π)  *  variance p X  * sqrt (variance p X)
-Proof
-    cheat
-QED
-
-Theorem IN_MEASURABLE_BOREL_SUM_CMUL:
-    ∀a f g s z.
-               FINITE s ∧ sigma_algebra a ∧ (∀i. i ∈ s ⇒ f i ∈ Borel_measurable a) ∧
-               (∀x. x ∈ space a ⇒ g x = Normal z * ∑ (λi. f i x) s) ⇒
-               g ∈ Borel_measurable a
-Proof
-    RW_TAC std_ss []
- >> Cases_on `Normal z = 0`
- >- METIS_TAC [IN_MEASURABLE_BOREL_CONST, mul_lzero]
- >> Q.ABBREV_TAC ‘h = λx. ∑ (λi. (f: β -> α -> extreal) i x) s’
- >> ‘∀x. h x = ∑ (λi. f i x) s’ by rw[Abbr ‘h’]
- >> MP_TAC (Q.SPECL [‘a’, ‘(f: 'b -> 'a -> extreal)’, ‘h’, ‘s’]
-            IN_MEASURABLE_BOREL_SUM')
- >> impl_tac
- >- (METIS_TAC [])
- >> DISCH_TAC
- >> MP_TAC (Q.SPECL [‘a’, ‘h’, ‘λx. Normal z * h x’, ‘z’]
-            IN_MEASURABLE_BOREL_CMUL)
- >> impl_tac
- >- (METIS_TAC [])
- >> ‘!x. x IN space a ==> (Normal z * h x = g x)’ by rw [Abbr ‘h’]
- >> DISCH_TAC
- >> MP_TAC (Q.SPECL [‘a’, ‘g’, ‘λx. Normal z * h x’]
-            IN_MEASURABLE_BOREL_EQ')
- >> impl_tac
- >> BETA_TAC
- >- (METIS_TAC [])
- >> simp []
-QED
 
 Definition BigO_def:
   BigO f g ⇔ ∃(c:real) (n0:num). 0 < c ∧
@@ -932,6 +724,288 @@ Proof
  >> simp [REAL_ADD_ASSOC]
 QED
 
+Theorem TAYLOR_REMAINDER:
+  ∀(diff:num -> real -> real) n (x:real). ∃M t.
+                                                abs (diff n t) ≤ M ⇒
+                     abs (diff n t / (&FACT n:real) * x pow n) ≤ M / &FACT n * abs (x) pow n
+Proof
+    rpt GEN_TAC
+    >> qexistsl [‘M’, ‘t’]
+    >> STRIP_TAC
+    >> ‘diff n t / &FACT n = diff n t * (&FACT n)⁻¹’ by METIS_TAC [real_div]
+    >> POP_ORW
+    >> ‘M / &FACT n =  M * (&FACT n)⁻¹’ by METIS_TAC [real_div]
+    >> POP_ORW
+    >> ‘!n. &0 < (&FACT n:real)’ by rw [REAL_LT, FACT_LESS]
+    >> POP_ASSUM (MP_TAC o Q.SPEC ‘n’)
+    >> DISCH_TAC
+    >> ‘0 <= (&FACT n: real)’ by METIS_TAC [REAL_LT_IMP_LE]
+    >> ‘&0 < (inv(&FACT n):real)’ by  METIS_TAC [REAL_INV_POS]
+    >> ‘abs (diff n t) * inv(&FACT n) ≤ M  * inv(&FACT n)’ by
+        METIS_TAC [REAL_LE_RMUL]
+    >> ‘abs (inv(&FACT n:real)) = inv(&FACT n)’ by rw[ABS_REFL]
+    >> ‘abs (diff n t) * abs (&FACT n)⁻¹ = abs (diff n t) * (&FACT n)⁻¹’ by rw []
+    >> ‘abs (diff n t) * abs (&FACT n)⁻¹ = abs (diff n t * (&FACT n)⁻¹)’ by METIS_TAC [ABS_MUL]
+    >> ‘abs (diff n t * (&FACT n)⁻¹) ≤ M  * inv(&FACT n)’ by METIS_TAC []
+    >> ‘0 ≤ abs (x pow n)’ by METIS_TAC [REAL_ABS_POS]
+    >> Cases_on ‘x pow n = 0’
+    >- (‘x = 0’ by METIS_TAC [POW_ZERO] \\
+        ‘abs x pow n = abs (x pow n)’ by rw [POW_ABS] \\
+        ‘abs (x pow n) = 0’ by METIS_TAC [REAL_ABS_0] \\
+        ‘diff n t * (&FACT n)⁻¹ * x pow n = 0’ by METIS_TAC [REAL_MUL_RZERO] \\
+        ‘M * (&FACT n)⁻¹ * abs x pow n = 0’ by METIS_TAC [REAL_MUL_RZERO] \\
+        METIS_TAC [])
+    >> ‘0 < abs (x pow n)’ by METIS_TAC [ABS_NZ]
+    >> ‘abs (diff n t * (&FACT n)⁻¹) * abs (x pow n) ≤ M * (&FACT n)⁻¹ * abs (x pow n)’ by
+        METIS_TAC [REAL_LE_RMUL]
+    >> ‘abs (diff n t * (&FACT n)⁻¹) * abs (x pow n) = abs (diff n t * (&FACT n)⁻¹ * x pow n)’ by
+        METIS_TAC [GSYM ABS_MUL]
+    >> FULL_SIMP_TAC std_ss []
+    >> ‘abs (x pow n) = (abs x) pow n’ by METIS_TAC [POW_ABS]
+    >> FULL_SIMP_TAC std_ss []
+QED
+
+Theorem TAYLOR_THEOREM:
+    ∀f diff a x n.
+                   a < x ∧ 0 < n ∧ diff 0 = f ∧
+                  (∀m t. m < n ∧ a ≤ t ∧ t ≤ x ⇒ (diff m diffl diff (SUC m) t) t) ⇒
+                     ∃t. a < t ∧ t < x ∧
+                         f x =
+                               sum (0,n) (λm. diff m a / &FACT m * (x − a) pow m) +
+                               diff n t / &FACT n * (x − a) pow n
+Proof
+    rpt STRIP_TAC
+ >> Q.ABBREV_TAC ‘g = λx. f (x + a)’
+ >> ‘∀x. g x = f (x + a)’ by rw [Abbr ‘g’]
+ >> POP_ASSUM (MP_TAC o Q.SPEC ‘x - a’)
+ >> ‘f (x - a + a) = f x’ by METIS_TAC [REAL_SUB_ADD]
+ >> POP_ORW
+ >> DISCH_TAC
+ >> Q.ABBREV_TAC ‘diff' = \n x. diff n (x + a)’
+ >> MP_TAC (Q.SPECL [‘g’, ‘diff'’, ‘x - a’, ‘n’] MCLAURIN)
+ >> impl_tac
+ >- (CONJ_TAC
+    (* 0 < x − a *)
+     >- (rw [REAL_SUB_LT])
+     >> CONJ_TAC
+    (* 0 < n *)
+     >> fs []
+     >> CONJ_TAC
+    (* diff' 0 = g *)
+     >- (rw [Abbr ‘diff'’])
+     (* ∀m t. m < n ∧ 0 ≤ t ∧ t ≤ x − a ⇒ (diff' m diffl diff' (SUC m) t) t *)
+     >> Q.UNABBREV_TAC ‘diff'’
+     >> BETA_TAC
+     >> qx_genl_tac [‘m’, ‘t’]
+     >> STRIP_TAC
+     >> ‘a ≤ t + a’ by rw [REAL_LE_ADDL]
+     >> ‘t + a ≤ x’ by METIS_TAC [REAL_LE_SUB_LADD]
+     >> Q.PAT_X_ASSUM ‘∀m t. m < n ∧ a ≤ t ∧ t ≤ x ⇒
+                             (diff m diffl diff (SUC m) t) t’
+       (MP_TAC o Q.SPECL [‘m’, ‘t + a’])
+     >> DISCH_TAC
+     >> MP_TAC (Q.SPECL [‘diff (m:num)’, ‘λx. (x + a)’, ‘diff (SUC m) (t + a:real)’, ‘1’, ‘t’] DIFF_CHAIN)
+     >> impl_tac
+     >- (CONJ_TAC
+         >- (BETA_TAC \\
+             METIS_TAC [])
+         (* ((λx. x + a) diffl 1) t *)
+         >> Know ‘((λx. x + a) diffl (1 + 0)) t’
+         >- (MP_TAC (Q.SPECL [‘λx. x’, ‘λx. a’, ‘1’, ‘0’, ‘t’] DIFF_ADD) \\
+             impl_tac \\
+             METIS_TAC [DIFF_X, DIFF_CONST] \\
+             BETA_TAC \\
+             simp [])
+         >> simp [REAL_ADD_RID])
+         >> simp [])
+ >> simp[]
+ >> DISCH_THEN (Q.X_CHOOSE_TAC ‘t’)
+ >> Q.EXISTS_TAC ‘t + a’
+ >> CONJ_TAC
+ >- (rw [REAL_LT_ADDL])
+ >> CONJ_TAC
+ >- (rw [REAL_LT_ADD_SUB])
+ >> Know ‘∀m. diff' m 0 = diff m a’
+    >- (Q.UNABBREV_TAC ‘diff'’ \\
+        BETA_TAC \\
+        simp [])
+ >> DISCH_TAC
+ >> simp []
+QED
+
+Theorem TAYLOR_CLT_LEMMA:
+  ∀diff (f:real -> real) x y M.
+                                0 < y ∧ diff (0:num) = f ∧
+                                (∀m t.  m < 3 ∧ x ≤ t ∧ t ≤ x + y ⇒ (diff m diffl diff (SUC m) t) t) ∧
+                                (∃z. ∀x. abs (diff 3 x) ≤ z) ∧
+                                M = sup {abs (diff 3 x) | x | T} ⇒
+                                abs (f (x + y) - (f x + diff 1 x * y + diff 2 x / 2 * y pow 2)) ≤
+                                M / 6 * abs y pow 3
+Proof
+    rpt GEN_TAC
+ >> STRIP_TAC
+ >> MP_TAC (Q.SPECL [‘f’, ‘diff’, ‘x’, ‘x + y’, ‘3’] TAYLOR_THEOREM)
+ >> simp []
+ >> DISCH_THEN (Q.X_CHOOSE_THEN ‘t’ STRIP_ASSUME_TAC)
+ >> ‘x + y − x = y’ by rw [REAL_ADD_SUB]
+ >> FULL_SIMP_TAC std_ss []
+ >> Know ‘sum (0,3) (λm. diff m x / &FACT m * y pow m) =
+           (f x + diff 1 x * y + diff 2 x / 2 * y²)’
+ >- (EVAL_TAC \\
+     simp [])
+ >> fs []
+ >> DISCH_TAC
+ >> Q.ABBREV_TAC ‘Z = f x + diff 1 x * y + diff 2 x / 2 * y²’
+ >> fs []
+ >> ‘Z + y³ * (&FACT 3)⁻¹ * diff 3 t − Z =   y³ * (&FACT 3)⁻¹ * diff 3 t’ by rw [REAL_ADD_SUB]
+ >> POP_ORW
+ >> Q.UNABBREV_TAC ‘Z’
+ >> ‘inv(&FACT 3) = (inv(6):real)’ by EVAL_TAC
+ >> POP_ORW
+ >> simp []
+ >> ‘abs (1 / 6 * (y³ * diff 3 t)) = abs (1/6) * abs (y³ * diff 3 t)’ by rw [ABS_MUL]
+ >> POP_ORW
+ >> ‘6 * (abs (1 / 6) * abs (y³ * diff 3 t)) = abs (y³ * diff 3 t)’
+     by rw [GSYM REAL_MUL_ASSOC, ABS_REFL, REAL_MUL_RINV, REAL_MUL_RID]
+ >> POP_ORW
+ >> ‘abs (y³ * diff 3 t) = abs (y³) * abs (diff 3 t)’ by rw [ABS_MUL]
+ >> POP_ORW
+ >> ‘abs (y pow 3) = abs y pow 3’ by METIS_TAC [POW_ABS]
+ >> POP_ORW
+ >> MATCH_MP_TAC REAL_LE_LMUL1
+ >> CONJ_TAC
+ >- (METIS_TAC [ABS_POS, POW_POS])
+ >> irule REAL_SUP_UBOUND_LE
+ >> CONJ_TAC
+ >- (ONCE_REWRITE_TAC [GSYM SPECIFICATION]\\
+     simp [] \\
+     qexists ‘t’ \\
+     rw [])
+ >> CONJ_TAC
+ >- (qexists ‘abs (diff 3 0)’ \\
+     ONCE_REWRITE_TAC [GSYM SPECIFICATION]\\
+     simp [] \\
+     qexists ‘0’ \\
+     rw [])
+ >> qexists ‘z’
+ >> GEN_TAC
+ >> Know ‘{abs (diff 3 x) | x | T} x' ⇔ x' IN {abs (diff 3 x) | x | T}’
+ >- (REWRITE_TAC [SPECIFICATION]) >> Rewr'
+ >> simp []
+ >> STRIP_TAC
+ >> rw []
+QED
+
+Theorem TAYLOR_REMAINDER':
+  ∀(diff :num -> real -> real) (n :num) x.
+                          ∃(M :extreal) t.
+                                           abs (Normal (diff n t)) ≤ M ⇒
+                                           abs (Normal ((diff n t / ((&FACT n) :real))) * Normal x pow n) ≤
+                                           M / &FACT n * abs (Normal x) pow n
+Proof
+    rpt GEN_TAC
+  >> qexistsl [‘M’, ‘t’]
+  >> STRIP_TAC
+  >> ‘Normal x pow n = Normal (x pow n)’ by rw [extreal_pow_def]
+  >> POP_ORW
+  >> ‘abs (Normal x) = Normal (abs x)’ by METIS_TAC [extreal_abs_def]
+  >> POP_ORW
+  >> ‘Normal (abs x) pow n = Normal ((abs x) pow n)’ by rw [extreal_pow_def]
+  >> POP_ORW
+  >> ‘abs x pow n = abs (x pow n)’ by rw [POW_ABS]
+  >> POP_ORW
+  >> Cases_on ‘x pow n = 0’
+  >- (‘abs (Normal (diff n t / &FACT n) * Normal (x pow n)) = 0’ by METIS_TAC [normal_0, mul_rzero, abs_0] \\
+      ‘M / &FACT n * Normal (abs (x pow n)) = 0’ by METIS_TAC [ABS_0, normal_0, mul_rzero] \\
+      simp [])
+  >> Know ‘!n. 0 < (&FACT n:extreal)’
+  >- (EVAL_TAC \\
+      rw [FACT_LESS, LE_1])
+  >> DISCH_TAC
+  >> ‘∀n. &FACT (n :num) ≠ NegInf’ by METIS_TAC [extreal_0_simps, lt_trans]
+  >> ‘∀n. &FACT (n :num) ≠ PosInf’ by cheat
+  >> ‘∃a. &FACT n = Normal a’ by METIS_TAC [extreal_cases]
+  >> ‘Normal (0:real) < Normal a’ by METIS_TAC [normal_0]
+  >> ‘0 < a’ by METIS_TAC [extreal_lt_eq]
+  >> rw []
+  >> Know ‘0 ≤ M’
+  >- (simp [sup_le] \\
+      rw[le_sup] \\
+      METIS_TAC [abs_pos, le_trans])
+  >> DISCH_TAC
+  >> ‘NegInf ≠ M’ by METIS_TAC [extreal_0_simps, lt_trans]
+  >> Cases_on ‘M = PosInf’
+  >- (‘M / Normal a = PosInf’ by METIS_TAC [infty_div] \\
+      ‘0 < Normal (abs (x pow n))’ by rw [abs_gt_0] \\
+      ‘M / Normal a * Normal (abs (x pow n)) = PosInf’ by METIS_TAC [mul_infty] \\
+      rw [])
+  >> ‘M / &FACT n = M * inv (&FACT n)’ by METIS_TAC [div_eq_mul_rinv]
+  >> POP_ORW
+  >> ‘∃r. M = Normal r’ by METIS_TAC [extreal_cases]
+  >> rw []
+  >> Q.ABBREV_TAC ‘A = diff n t / &FACT n’
+  >> Q.ABBREV_TAC ‘B = x pow n’
+  >> ‘Normal A * Normal B = Normal (A * B)’ by METIS_TAC [extreal_mul_eq]
+  >> POP_ORW
+  >> ‘abs (Normal (A * B)) = Normal (abs (A * B))’ by METIS_TAC [extreal_abs_def]
+  >> POP_ORW
+  >> rw [Abbr ‘A’, Abbr ‘B’]
+  >> ‘Normal 0 ≠ Normal a’ by METIS_TAC [lt_imp_ne]
+  >> ‘M / Normal a = M * inv (Normal a)’ by METIS_TAC [extreal_div_def]
+  >> POP_ORW
+  >> ‘inv (Normal a) ≠ PosInf ∧ inv (Normal a) ≠ NegInf’ by METIS_TAC [normal_0, inv_not_infty]
+  >> ‘∃c. inv (Normal a) = Normal c’ by METIS_TAC [extreal_cases]
+  >> rw []
+  >> ‘Normal r * Normal c = Normal (r * c)’ by rw [extreal_mul_def]
+  >> POP_ORW
+  >> ‘Normal (abs x) pow n = Normal ((abs x) pow n)’ by rw [extreal_pow_def]
+  >> POP_ORW
+  >> ‘Normal (r * c) * Normal (abs x pow n) =
+      Normal (r * c * abs x pow n)’ by rw [extreal_mul_def]
+  >> POP_ORW
+  >> simp [extreal_le_eq]
+  >> MP_TAC (Q.SPECL [‘diff’, ‘n’, ‘x’]
+             TAYLOR_REMAINDER)
+  >> cheat
+QED
+
+Theorem normal_absolute_third_moment:
+    ∀p X sig. normal_rv X p 0 sig ⇒
+              absolute_third_moment p X = sqrt (8 / π)  *  variance p X  * sqrt (variance p X)
+Proof
+    cheat
+QED
+
+Theorem IN_MEASURABLE_BOREL_SUM_CMUL:
+    ∀a f g s z.
+               FINITE s ∧ sigma_algebra a ∧ (∀i. i ∈ s ⇒ f i ∈ Borel_measurable a) ∧
+               (∀x. x ∈ space a ⇒ g x = Normal z * ∑ (λi. f i x) s) ⇒
+               g ∈ Borel_measurable a
+Proof
+    RW_TAC std_ss []
+ >> Cases_on `Normal z = 0`
+ >- METIS_TAC [IN_MEASURABLE_BOREL_CONST, mul_lzero]
+ >> Q.ABBREV_TAC ‘h = λx. ∑ (λi. (f: β -> α -> extreal) i x) s’
+ >> ‘∀x. h x = ∑ (λi. f i x) s’ by rw[Abbr ‘h’]
+ >> MP_TAC (Q.SPECL [‘a’, ‘(f: 'b -> 'a -> extreal)’, ‘h’, ‘s’]
+            IN_MEASURABLE_BOREL_SUM')
+ >> impl_tac
+ >- (METIS_TAC [])
+ >> DISCH_TAC
+ >> MP_TAC (Q.SPECL [‘a’, ‘h’, ‘λx. Normal z * h x’, ‘z’]
+            IN_MEASURABLE_BOREL_CMUL)
+ >> impl_tac
+ >- (METIS_TAC [])
+ >> ‘!x. x IN space a ==> (Normal z * h x = g x)’ by rw [Abbr ‘h’]
+ >> DISCH_TAC
+ >> MP_TAC (Q.SPECL [‘a’, ‘g’, ‘λx. Normal z * h x’]
+            IN_MEASURABLE_BOREL_EQ')
+ >> impl_tac
+ >> BETA_TAC
+ >- (METIS_TAC [])
+ >> simp []
+QED
+
 Theorem expectation_linear:
   ∀p X Y.
           prob_space p ∧
@@ -941,9 +1015,9 @@ Theorem expectation_linear:
           integrable p Y ⇒
           expectation p (λx. X x + Y x) = expectation p X + expectation p Y
 Proof
-  rw [expectation_def, prob_space_def, real_random_variable_def, p_space_def]
-  >> MATCH_MP_TAC integral_add
-  >> simp []
+    rw [expectation_def, prob_space_def, real_random_variable_def, p_space_def]
+ >> MATCH_MP_TAC integral_add
+ >> simp []
 QED
 
 Theorem expectation_linear':
@@ -955,25 +1029,22 @@ Theorem expectation_linear':
     integrable p (Normal o Y) ⇒
     expectation p (Normal o (λx. X x + Y x)) = expectation p (Normal o X) + expectation p (Normal o Y)
 Proof
-  rw []
-  >> MP_TAC (Q.SPECL [‘p’, ‘Normal o X’, ‘Normal o Y’]
-              expectation_linear)
-  >> simp []
-  >> STRIP_TAC
-  >> Know ‘expectation p (λx. Normal (X x) + Normal (Y x)) =
-           expectation p (Normal ∘ (λx. X x + Y x))’
-  >- (MATCH_MP_TAC expectation_cong \\
-      rw[extreal_add_eq])
-  >> DISCH_TAC
-  >> FULL_SIMP_TAC std_ss [integrable_def]
-  >> Know ‘real_random_variable (Normal ∘ X) p’
-  >- (rw [real_random_variable_def, random_variable_def] \\
-      (* Normal ∘ X ∈ Borel_measurable (p_space p,events p) *)
-      cheat)
-  >> Know ‘real_random_variable (Normal ∘ Y) p’
-  >- (rw [real_random_variable_def, random_variable_def] \\
-      cheat)
-  >> FULL_SIMP_TAC std_ss []
+    rw []
+ >> MP_TAC (Q.SPECL [‘p’, ‘Normal o X’, ‘Normal o Y’]
+            expectation_linear)
+ >> simp []
+ >> STRIP_TAC
+ >> Know ‘expectation p (λx. Normal (X x) + Normal (Y x)) =
+          expectation p (Normal ∘ (λx. X x + Y x))’
+ >- (MATCH_MP_TAC expectation_cong \\
+     rw[extreal_add_eq])
+ >> DISCH_TAC
+ >> FULL_SIMP_TAC std_ss [integrable_def]
+ >> Know ‘real_random_variable (Normal ∘ X) p’
+ >- (rw [real_random_variable_def, random_variable_def, p_space_def, events_def])
+ >> Know ‘real_random_variable (Normal ∘ Y) p’
+ >- (rw [real_random_variable_def, random_variable_def, p_space_def, events_def])
+ >> FULL_SIMP_TAC std_ss []
 QED
 
 (*
