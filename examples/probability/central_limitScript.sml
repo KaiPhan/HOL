@@ -840,7 +840,7 @@ Proof
  >> simp []
 QED
 
-Theorem TAYLOR_CLT_LEMMA:
+Theorem TAYLOR_CLT_LEMMA [local]:
   ∀diff (f:real -> real) x y M.
                                 0 < y ∧ diff (0:num) = f ∧
                                 (∀m t.  m < 3 ∧ x ≤ t ∧ t ≤ x + y ⇒ (diff m diffl diff (SUC m) t) t) ∧
@@ -935,7 +935,7 @@ Proof
  >> ‘∀n. (0: real) ≠ &FACT n’ by METIS_TAC [REAL_LT_IMP_NE]
  >> Know ‘0 ≤ M’
  >- (simp [sup_le] \\
-     rw[le_sup] \\
+     rw [le_sup] \\
      METIS_TAC [abs_pos, le_trans])
  >> DISCH_TAC
  >> ‘NegInf ≠ M’ by METIS_TAC [extreal_0_simps, lt_trans]
@@ -1048,6 +1048,82 @@ Proof
  >- (rw [real_random_variable_def, random_variable_def, p_space_def, events_def])
  >> FULL_SIMP_TAC std_ss []
 QED
+
+Theorem expectation_mono:
+    ∀p X Y.
+            prob_space p ∧
+            random_variable X p borel ∧
+            integrable p (Normal o X) ∧
+            random_variable Y p borel ∧
+            integrable p (Normal o Y) ∧
+            (∀x. X x ≤ Y x) ⇒
+            expectation p (Normal o X) ≤ expectation p (Normal o Y)
+Proof
+    rw []
+ >> Q.ABBREV_TAC ‘Z = λx. Y x - X x’
+ >> ‘∀x. Z x = Y x - X x’ by rw [Abbr ‘Z’]
+ >> Know ‘0 ≤ expectation p (Normal o Z)’
+ >- (‘∀x. 0 ≤ Z x’ by rw [Abbr ‘Z’, REAL_SUB_LE] \\
+     ‘∀x. 0 ≤ (Normal ∘ Z) x’ by METIS_TAC [extreal_le_eq, normal_0, o_DEF] \\
+     MATCH_MP_TAC expectation_pos \\
+     simp [])
+ >> DISCH_TAC
+ >> ‘∀x. Z x + X x = Y x’ by METIS_TAC [REAL_EQ_SUB_LADD]
+ >> Know ‘expectation p (Normal o (λx. Z x + X x)) =
+          expectation p (Normal o (λx. Y x))’
+ >- (MATCH_MP_TAC expectation_cong \\
+     simp [])
+ >> DISCH_TAC
+ >> Know ‘integrable p (Normal ∘ Z)’
+ >- (fs [Abbr ‘Z’] \\
+     MP_TAC (Q.SPECL [‘p’, ‘Normal o Y’, ‘Normal o X’]
+             integrable_sub') \\
+     simp [prob_space_def] \\
+     ‘(λx. Normal (Y x) − Normal (X x)) = (λx. Normal (Y x - X x))’
+       by METIS_TAC [extreal_sub_def] \\
+     ‘(λx. Normal (Y x - X x)) = Normal ∘ (λx. Y x − X x)’ by rw [o_DEF] \\
+     ‘(λx. Normal (Y x) − Normal (X x)) = Normal ∘ (λx. Y x − X x)’ by fs [] \\
+     POP_ORW \\
+     FULL_SIMP_TAC std_ss [prob_space_def])
+ >> DISCH_TAC
+ >> Know ‘expectation p (Normal ∘ (λx. Z x + X x)) =
+          expectation p (Normal ∘ Z) + expectation p (Normal ∘ X)’
+ >- (MATCH_MP_TAC expectation_linear' \\
+     simp [] \\
+     fs [Abbr ‘Z’, random_variable_def] \\
+     MATCH_MP_TAC in_borel_measurable_sub \\
+     qexistsl [‘Y’, ‘X’] \\
+     fs [prob_space_def, p_space_def, events_def])
+ >> DISCH_TAC
+ >> ‘expectation p (Normal ∘ (λx. Y x)) =
+     expectation p (Normal ∘ Z) + expectation p (Normal ∘ X)’ by fs []
+ >> ‘Normal ∘ (λx. Y x) = Normal ∘ Y’ by METIS_TAC [o_DEF]
+ >> FULL_SIMP_TAC std_ss []
+ >> POP_ORW
+ >> ‘expectation p (Normal ∘ X) ≠ PosInf ∧ expectation p (Normal ∘ X) ≠ NegInf’
+     by METIS_TAC [expectation_finite]
+ >> ‘expectation p (Normal ∘ Z) ≠ PosInf ∧ expectation p (Normal ∘ Z) ≠ NegInf’
+     by METIS_TAC [expectation_finite]
+ >> ‘expectation p (Normal ∘ Z) + expectation p (Normal ∘ X) =
+     expectation p (Normal ∘ X) + expectation p (Normal ∘ Z)’ by METIS_TAC [add_comm]
+ >> POP_ORW
+ >> METIS_TAC [le_addr_imp]
+QED
+
+(*
+Theorem TAYLOR_REMAINDER_EXPECTATION:
+Proof
+QED
+
+Theorem TAYLOR_THEOREM_EXPECTATION:
+  ∀p X Y diff (M: extreal) f.
+    prob_space p ∧
+    random_variable X p borel ∧
+    random_variable Y p borel ∧
+    third_moment p (Normal o X) < PosInf ⇒
+Proof
+QED
+*)
 
 (*
 Theorem TAYLOR_EXP[local]:
