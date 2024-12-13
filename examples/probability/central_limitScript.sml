@@ -402,9 +402,9 @@ Definition third_moments_def:
   third_moments p X n = SIGMA (λi. third_moment p (X i)) (count1 n)
 End
 
-
 (* ------------------------------------------------------------------------- *)
-
+(*  Big O Notation                                                           *)
+(* ------------------------------------------------------------------------- *)
 
 Definition BigO_def:
   BigO f g ⇔ ∃(c:real) (n0:num). 0 < c ∧
@@ -724,10 +724,17 @@ Proof
  >> simp [REAL_ADD_ASSOC]
 QED
 
+(* ------------------------------------------------------------------------- *)
+(*  Taylor Theorem                                                           *)
+(* ------------------------------------------------------------------------- *)
+
+
 Theorem TAYLOR_REMAINDER:
-  ∀(diff:num -> real -> real) n (x:real). ∃M t.
-                                                abs (diff n t) ≤ M ⇒
-                     abs (diff n t / (&FACT n:real) * x pow n) ≤ M / &FACT n * abs (x) pow n
+  ∀(diff:num -> real -> real) n (x:real).
+    ∃M t.
+          abs (diff n t) ≤ M ⇒
+          abs (diff n t / (&FACT n:real) * x pow n) ≤
+          M / &FACT n * abs (x) pow n
 Proof
     rpt GEN_TAC
     >> qexistsl [‘M’, ‘t’]
@@ -901,72 +908,67 @@ Theorem TAYLOR_REMAINDER':
                           ∃(M :extreal) t.
                                            abs (Normal (diff n t)) ≤ M ⇒
                                            abs (Normal ((diff n t / ((&FACT n) :real))) * Normal x pow n) ≤
-                                           M / &FACT n * abs (Normal x) pow n
+                                           M / (Normal (&FACT n)) * abs (Normal x) pow n
 Proof
     rpt GEN_TAC
-  >> qexistsl [‘M’, ‘t’]
-  >> STRIP_TAC
-  >> ‘Normal x pow n = Normal (x pow n)’ by rw [extreal_pow_def]
-  >> POP_ORW
-  >> ‘abs (Normal x) = Normal (abs x)’ by METIS_TAC [extreal_abs_def]
-  >> POP_ORW
-  >> ‘Normal (abs x) pow n = Normal ((abs x) pow n)’ by rw [extreal_pow_def]
-  >> POP_ORW
-  >> ‘abs x pow n = abs (x pow n)’ by rw [POW_ABS]
-  >> POP_ORW
-  >> Cases_on ‘x pow n = 0’
-  >- (‘abs (Normal (diff n t / &FACT n) * Normal (x pow n)) = 0’ by METIS_TAC [normal_0, mul_rzero, abs_0] \\
-      ‘M / &FACT n * Normal (abs (x pow n)) = 0’ by METIS_TAC [ABS_0, normal_0, mul_rzero] \\
-      simp [])
-  >> Know ‘!n. 0 < (&FACT n:extreal)’
-  >- (EVAL_TAC \\
-      rw [FACT_LESS, LE_1])
-  >> DISCH_TAC
-  >> ‘∀n. &FACT (n :num) ≠ NegInf’ by METIS_TAC [extreal_0_simps, lt_trans]
-  >> ‘∀n. &FACT (n :num) ≠ PosInf’ by cheat
-  >> ‘∃a. &FACT n = Normal a’ by METIS_TAC [extreal_cases]
-  >> ‘Normal (0:real) < Normal a’ by METIS_TAC [normal_0]
-  >> ‘0 < a’ by METIS_TAC [extreal_lt_eq]
-  >> rw []
-  >> Know ‘0 ≤ M’
-  >- (simp [sup_le] \\
-      rw[le_sup] \\
-      METIS_TAC [abs_pos, le_trans])
-  >> DISCH_TAC
-  >> ‘NegInf ≠ M’ by METIS_TAC [extreal_0_simps, lt_trans]
-  >> Cases_on ‘M = PosInf’
-  >- (‘M / Normal a = PosInf’ by METIS_TAC [infty_div] \\
-      ‘0 < Normal (abs (x pow n))’ by rw [abs_gt_0] \\
-      ‘M / Normal a * Normal (abs (x pow n)) = PosInf’ by METIS_TAC [mul_infty] \\
-      rw [])
-  >> ‘M / &FACT n = M * inv (&FACT n)’ by METIS_TAC [div_eq_mul_rinv]
-  >> POP_ORW
-  >> ‘∃r. M = Normal r’ by METIS_TAC [extreal_cases]
-  >> rw []
-  >> Q.ABBREV_TAC ‘A = diff n t / &FACT n’
-  >> Q.ABBREV_TAC ‘B = x pow n’
-  >> ‘Normal A * Normal B = Normal (A * B)’ by METIS_TAC [extreal_mul_eq]
-  >> POP_ORW
-  >> ‘abs (Normal (A * B)) = Normal (abs (A * B))’ by METIS_TAC [extreal_abs_def]
-  >> POP_ORW
-  >> rw [Abbr ‘A’, Abbr ‘B’]
-  >> ‘Normal 0 ≠ Normal a’ by METIS_TAC [lt_imp_ne]
-  >> ‘M / Normal a = M * inv (Normal a)’ by METIS_TAC [extreal_div_def]
-  >> POP_ORW
-  >> ‘inv (Normal a) ≠ PosInf ∧ inv (Normal a) ≠ NegInf’ by METIS_TAC [normal_0, inv_not_infty]
-  >> ‘∃c. inv (Normal a) = Normal c’ by METIS_TAC [extreal_cases]
-  >> rw []
-  >> ‘Normal r * Normal c = Normal (r * c)’ by rw [extreal_mul_def]
-  >> POP_ORW
-  >> ‘Normal (abs x) pow n = Normal ((abs x) pow n)’ by rw [extreal_pow_def]
-  >> POP_ORW
-  >> ‘Normal (r * c) * Normal (abs x pow n) =
-      Normal (r * c * abs x pow n)’ by rw [extreal_mul_def]
-  >> POP_ORW
-  >> simp [extreal_le_eq]
-  >> MP_TAC (Q.SPECL [‘diff’, ‘n’, ‘x’]
-             TAYLOR_REMAINDER)
-  >> cheat
+ >> qexistsl [‘M’, ‘t’]
+ >> STRIP_TAC
+ >> ‘Normal x pow n = Normal (x pow n)’ by rw [extreal_pow_def]
+ >> POP_ORW
+ >> ‘abs (Normal x) = Normal (abs x)’ by METIS_TAC [extreal_abs_def]
+ >> POP_ORW
+ >> ‘Normal (abs x) pow n = Normal ((abs x) pow n)’ by rw [extreal_pow_def]
+ >> POP_ORW
+ >> ‘abs x pow n = abs (x pow n)’ by rw [POW_ABS]
+ >> POP_ORW
+ >> Cases_on ‘x pow n = 0’
+ >- (‘abs (Normal (diff n t / &FACT n) * Normal (x pow n)) = 0’
+      by METIS_TAC [normal_0, mul_rzero, abs_0] \\
+     ‘M / Normal (&FACT n) * Normal (abs (x pow n)) = 0’
+      by METIS_TAC [ABS_0, normal_0, mul_rzero] \\
+     simp [])
+ >> Know ‘!n. (0: real) < &FACT n’
+ >- (EVAL_TAC \\
+     rw [FACT_LESS, LE_1])
+ >> DISCH_TAC
+ >> ‘∀n. (0: real) <= &FACT n’ by METIS_TAC [REAL_LT_IMP_LE]
+ >> ‘∀n. (0: real) ≠ &FACT n’ by METIS_TAC [REAL_LT_IMP_NE]
+ >> Know ‘0 ≤ M’
+ >- (simp [sup_le] \\
+     rw[le_sup] \\
+     METIS_TAC [abs_pos, le_trans])
+ >> DISCH_TAC
+ >> ‘NegInf ≠ M’ by METIS_TAC [extreal_0_simps, lt_trans]
+ >> Cases_on ‘M = PosInf’
+ >- (‘M / Normal (&FACT n) = PosInf’ by METIS_TAC [infty_div] \\
+     ‘0 < Normal (abs (x pow n))’ by rw [abs_gt_0] \\
+     ‘M / Normal (&FACT n) * Normal (abs (x pow n)) = PosInf’ by METIS_TAC [mul_infty] \\
+     rw [])
+ >> ‘∃r. M = Normal r’ by METIS_TAC [extreal_cases]
+ >> rw []
+ >> ‘Normal (diff n t / &FACT n) * Normal (x pow n) =
+     Normal (diff n t / &FACT n * x pow n)’ by METIS_TAC [extreal_mul_def]
+ >> POP_ORW
+ >> ‘Normal r / Normal (&FACT n) = Normal (r / &FACT n)’ by METIS_TAC [extreal_div_eq]
+ >> POP_ORW
+ >> ‘Normal (r / &FACT n) * Normal (abs (x pow n)) =
+     Normal (r / &FACT n * abs (x pow n))’ by METIS_TAC [extreal_mul_def]
+ >> POP_ORW
+ >> ‘abs (Normal (diff n t / &FACT n * x pow n)) =
+     Normal (abs (diff n t / &FACT n * x pow n))’ by METIS_TAC [extreal_abs_def]
+ >> POP_ORW
+ >> ‘abs (Normal (diff n t)) = Normal (abs (diff n t))’ by METIS_TAC [extreal_abs_def]
+ >> FULL_SIMP_TAC std_ss [extreal_le_eq]
+ >> ‘abs (diff n t) / &FACT n ≤ r / &FACT n’ by rw [REAL_LE_RDIV_CANCEL]
+ >> ‘abs (&FACT n) = (&FACT n: real)’ by rw [ABS_REFL]
+ >> ‘abs (diff n t) / &FACT n = abs (diff n t / &FACT n)’ by METIS_TAC [GSYM ABS_DIV]
+ >> FULL_SIMP_TAC std_ss []
+ >> ‘0 < abs (x pow n)’ by METIS_TAC [ABS_NZ]
+ >> ‘abs (diff n t / &FACT n) * abs (x pow n) ≤ r / &FACT n * abs (x pow n)’
+     by METIS_TAC [GSYM REAL_LE_RMUL]
+ >> ‘abs (diff n t / &FACT n) * abs (x pow n) = abs (diff n t / &FACT n * x pow n)’
+     by METIS_TAC [GSYM ABS_MUL]
+ >> FULL_SIMP_TAC std_ss []
 QED
 
 Theorem normal_absolute_third_moment:
