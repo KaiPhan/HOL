@@ -382,26 +382,6 @@ Proof
  >> Q.EXISTS_TAC ‘m’ >> rw []
 QED
 
-
-(* ------------------------------------------------------------------------- *)
-(*  Normal density                                                           *)
-(* ------------------------------------------------------------------------- *)
-Definition third_moment_def:
-    third_moment p X = central_moment p X 3
-End
-
-Definition absolute_third_moment_def:
-    absolute_third_moment p X  = absolute_moment p X 0 3
-End
-
-Definition second_moments_def:
-  second_moments p X n = SIGMA (λi. central_moment p (X i) 2) (count1 n)
-End
-
-Definition third_moments_def:
-  third_moments p X n = SIGMA (λi. third_moment p (X i)) (count1 n)
-End
-
 (* ------------------------------------------------------------------------- *)
 (*  Big O Notation                                                           *)
 (* ------------------------------------------------------------------------- *)
@@ -971,13 +951,6 @@ Proof
  >> FULL_SIMP_TAC std_ss []
 QED
 
-Theorem normal_absolute_third_moment:
-    ∀p X sig. normal_rv X p 0 sig ⇒
-              absolute_third_moment p X = sqrt (8 / π)  *  variance p X  * sqrt (variance p X)
-Proof
-    cheat
-QED
-
 Theorem IN_MEASURABLE_BOREL_SUM_CMUL:
     ∀a f g s z.
                FINITE s ∧ sigma_algebra a ∧ (∀i. i ∈ s ⇒ f i ∈ Borel_measurable a) ∧
@@ -1163,6 +1136,25 @@ Proof
 QED
 *)
 
+(* ------------------------------------------------------------------------- *)
+(*  Normal density                                                           *)
+(* ------------------------------------------------------------------------- *)
+Definition third_moment_def:
+  third_moment p X = central_moment p X 3
+End
+
+Definition absolute_third_moment_def:
+  absolute_third_moment p X  = absolute_moment p X 0 3
+End
+
+Definition second_moments_def:
+  second_moments p X n = SIGMA (λi. central_moment p (X i) 2) (count1 n)
+End
+
+Definition third_moments_def:
+  third_moments p X n = SIGMA (λi. third_moment p (X i)) (count1 n)
+End
+
 Overload ext_normal_density = “\mu sig. Normal o normal_density mu sig o real”
 
 Definition normal_measure_def :
@@ -1170,12 +1162,21 @@ Definition normal_measure_def :
   pos_fn_integral ext_lborel (\x. ext_normal_density mu sig x * indicator_fn s x)
 End
 
+
 Definition normal_rv_def :
   normal_rv X p mu sig <=> real_random_variable X p /\
                            !s. s IN subsets Borel ==>
                                distribution p X s = normal_measure mu sig s
 End
 
+Theorem normal_absolute_third_moment:
+  ∀p X sig. normal_rv X p 0 sig ⇒
+            absolute_third_moment p X = sqrt (8 / π)  *  variance p X  * sqrt (variance p X)
+Proof
+  cheat
+QED
+
+(* Linderberg's approach, waiting for sum of normal distributed rv theorem *)
 Theorem central_limit:
   ∀p X Y N s b. prob_space p ∧
                 normal_rv N p 0 1 ∧
@@ -1187,7 +1188,7 @@ Theorem central_limit:
                (∀i j. indep_vars p (X i) (Y j) Borel Borel) ∧
                (∀i. expectation p (X i) = 0) ∧
                (∀i. central_moment p (X i) 2 < PosInf) ∧
-               (∀i. third_moment p (X i) < PosInf) ∧
+               (∀i. integrable p (X i)) ∧
                (∀n. s n = sqrt (second_moments p X n)) ∧
                (∀n. b n = third_moments p X n) ∧
                ((\n. b n / (s n pow 3)) --> 0) sequentially ⇒
@@ -1222,8 +1223,6 @@ Proof
       >> ‘0 < C’ by rw[lt_le]
       >> ‘inv(C) ≠ NegInf ∧ inv(C) ≠ PosInf’ by METIS_TAC[inv_not_infty]
       >> ‘∃r. Normal r = inv(C)’ by METIS_TAC[extreal_cases]
-
-
       >> Q.ABBREV_TAC ‘D = λx. ∑ (λi. X i x) (count1 i)’
       >> ‘∀x. D x = ∑ (λi. X i x) (count1 i)’ by rw[Abbr ‘D’]
       >> Know ‘∀x. D x ≠ NegInf’
@@ -1271,6 +1270,136 @@ Proof
   >> cheat
 QED
 
+Theorem central_limit_alt:
+  ∀p X N s b.
+    prob_space p ∧
+    normal_rv N p 0 1 ∧
+    (∀i. real_random_variable (X i) p) ∧
+    (∀i j. indep_vars p (X i) (X j) Borel Borel) ∧
+    (∀i. expectation p (X i) = 0) ∧
+    (∀i. central_moment p (X i) 2 < +∞) ∧
+    (∀i. integrable p (X i))  ∧
+    (∀n. s n = sqrt (second_moments p X n)) ∧
+    (∀n. b n = third_moments p X n) ∧
+    ((λn. b n / (s n)³) ⟶ 0) sequentially ⇒
+    ((λn x. ∑ (λi. X i x) (count1 n) / s n) ⟶ N) (in_distribution p)
+Proof
+  rpt STRIP_TAC
+  >> Q.ABBREV_TAC ‘Z = λn x. ∑ (λi. X i x) (count1 n) / s n’
+  >> fs[normal_rv_def]
+  >> Know ‘∀i. real_random_variable (Z i) p’
+  >- (cheat)
+  >> DISCH_TAC
+  >> rw [converge_in_dist_alt']
+  >> MP_TAC (Q.SPECL [‘f’, ‘diff’, ‘0’, ‘Z n’, ‘3’]
+              TAYLOR_THEOREM)
+  >> cheat (* conflict on type of Z *)
+QED
+
+(*
+val measurable_distr = new_definition ("measurable_distr",
+                                       ``measurable_distr p X = (\s. if s IN subsets borel then distribution p X s else 0)``);
+
+val normal_pmeasure = new_definition("normal_pmeasure",
+                                     ``normal_pmeasure mu sig =
+                                     (\A. if A IN measurable_sets lborel then
+                                            pos_fn_integral lborel
+                                                            (\x. (\x. Normal (normal_density mu sig x)) x *
+                                                                 indicator_fn A x) else 0)``);
+
+val normal_rv = new_definition("normal_rv",``normal_rv X p mu sig =
+                               (random_variable X p borel /\
+                                (measurable_distr p X = normal_pmeasure mu sig))``);
+*)
+
+
+(* normal_rv gets from hvg's people*)
+(*
+Theorem central_limit_alt':
+  ∀p X N s b.
+              prob_space p ∧
+              normal_rv N p 0 1 ∧
+              (∀i. real_random_variable (Normal o (X i)) p) ∧
+              (∀i j. indep_vars p (Normal o (X i)) (Normal o (X j)) Borel Borel) ∧
+              (∀i. expectation p (Normal o (X i)) = 0) ∧
+              (∀i. central_moment p (Normal o (X i)) 2 < +∞) ∧
+              (∀i. integrable p (Normal o (X i)))  ∧
+              (∀n. s n = sqrt (second_moments p (λi. Normal o (X i)) n)) ∧
+              (∀n. b n = third_moments p (λi. Normal o (X i)) n) ∧
+              ((λn. b n / (s n)³) ⟶ 0) sequentially ⇒
+              ((λn x. ∑ (Normal o (λi. X i x)) (count1 n) / s n) ⟶ Normal o N) (in_distribution p)
+Proof
+  rpt STRIP_TAC
+  >> Q.ABBREV_TAC ‘Z = λn x. ∑ (Normal o (λi. X i x)) (count1 n) / s n’
+  >> fs[normal_rv]
+  >> Know ‘∀i. real_random_variable (Z i) p’
+  >- (rw [Abbr ‘Z’] \\
+      Q.ABBREV_TAC ‘C =  sqrt (second_moments p (λi. Normal ∘ X i) i)’ \\
+      Know ‘0 < C’
+      >- (cheat) \\
+      DISCH_TAC \\
+                ‘C ≠ 0’ by cheat \\
+      ‘inv(C) ≠ NegInf ∧ inv(C) ≠ PosInf’ by METIS_TAC[inv_not_infty] \\
+      ‘∃r. Normal r = inv(C)’ by METIS_TAC[extreal_cases] \\
+      Q.ABBREV_TAC ‘D = λx. ∑ (Normal ∘ (λi. X i x)) (count1 i)’ \\
+      ‘∀x. D x = ∑ (Normal ∘ (λi. X i x)) (count1 i)’ by rw[Abbr ‘D’] \\
+      Know ‘∀x. D x ≠ NegInf’
+      >- (rw[Abbr ‘D’] \\
+          MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_NEGINF \\
+          CONJ_TAC >- REWRITE_TAC [FINITE_COUNT] \\
+          Q.X_GEN_TAC ‘x'’ \\
+          FULL_SIMP_TAC std_ss [real_random_variable_def]\\
+          Q.PAT_X_ASSUM ‘ ∀i'.
+                            random_variable (Normal ∘ X i') p Borel ∧
+                            ∀x. x ∈ p_space p ⇒ Normal (X i' x) ≠ −∞ ∧ Normal (X i' x) ≠ +∞’
+           (MP_TAC o Q.SPEC ‘x'’) \\
+          STRIP_TAC \\
+          POP_ASSUM (MP_TAC o Q.SPEC ‘x’) \\
+          STRIP_TAC \\
+          cheat) \\
+      DISCH_TAC \\
+      Know ‘∀x. D x ≠ PosInf’
+      >- (rw[Abbr ‘D’] \\
+          MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_POSINF \\
+          cheat) \\
+      DISCH_TAC \\
+      ‘∀x. D x / C = inv(C) * D x’ by METIS_TAC[div_eq_mul_linv] \\
+      ‘∀x. D x / C = Normal r * D x’ by METIS_TAC[div_eq_mul_linv] \\
+      rw[Abbr ‘D’] \\
+      FULL_SIMP_TAC std_ss [] \\
+      cheat)
+  >> DISCH_TAC
+
+  >> MP_TAC (Q.SPECL [‘p’, ‘Z’, ‘Normal o N’]
+              converge_in_dist_alt')
+  >> impl_tac
+  >- (simp [] \\
+      (* real_random_variable (Normal ∘ N) p *)
+      cheat)
+  >> rw []
+
+  >> Q.ABBREV_TAC ‘A = λn. expectation p (Normal ∘ f ∘ real ∘ Z n)’
+  >> Q.ABBREV_TAC ‘B = expectation p (Normal ∘ f ∘ real ∘ Normal o N)’
+  >> ‘∀n. A n = expectation p (Normal ∘ f ∘ real ∘ Z n)’ by rw [Abbr ‘A’]
+  >> Know ‘∀n. A n ≠ PosInf’
+  >- (rw [Abbr ‘A’, Abbr ‘Z’] \\
+      Know ‘integrable p (λx. SIGMA (Normal o (λi. X i x)) (count1 n))’
+      >- (MATCH_MP_TAC integrable_sum'
+         )
+     )
+
+  >> ‘∀n. A n ≠ PosInf ∧ A n ≠ NegInf’ by cheat
+  >> ‘B ≠ PosInf ∧ B ≠ NegInf’ by cheat
+  >> ‘∃(f': num -> real). A = Normal o f'’ by cheat
+  >> ‘∃c. B = Normal c’ by METIS_TAC [extreal_cases]
+  >> rw []
+  >> MATCH_MP_TAC lim_sequentially_imp_extreal_lim
+  >> rw [LIM_SEQUENTIALLY_SEQ]
+  >> Know ‘((λn. f' n - c) --> 0) n’
+  >- (cheat)
+  >> cheat
+QED
+*)
 
 (* ------------------------------------------------------------------------- *)
 (*  Moment generating function                                               *)
