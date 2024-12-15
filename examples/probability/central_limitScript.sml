@@ -1270,6 +1270,7 @@ Proof
   >> cheat
 QED
 
+(* Avoiding introducing Y version *)
 Theorem central_limit_alt:
   ∀p X N s b.
     prob_space p ∧
