@@ -704,10 +704,203 @@ Proof
  >> simp [REAL_ADD_ASSOC]
 QED
 
+
+Theorem IN_MEASURABLE_BOREL_SUM_CMUL:
+    ∀a f g s z.
+               FINITE s ∧ sigma_algebra a ∧ (∀i. i ∈ s ⇒ f i ∈ Borel_measurable a) ∧
+               (∀x. x ∈ space a ⇒ g x = Normal z * ∑ (λi. f i x) s) ⇒
+               g ∈ Borel_measurable a
+Proof
+    RW_TAC std_ss []
+ >> Cases_on `Normal z = 0`
+ >- METIS_TAC [IN_MEASURABLE_BOREL_CONST, mul_lzero]
+ >> Q.ABBREV_TAC ‘h = λx. ∑ (λi. (f: β -> α -> extreal) i x) s’
+ >> ‘∀x. h x = ∑ (λi. f i x) s’ by rw[Abbr ‘h’]
+ >> MP_TAC (Q.SPECL [‘a’, ‘(f: 'b -> 'a -> extreal)’, ‘h’, ‘s’]
+            IN_MEASURABLE_BOREL_SUM')
+ >> impl_tac
+ >- (METIS_TAC [])
+ >> DISCH_TAC
+ >> MP_TAC (Q.SPECL [‘a’, ‘h’, ‘λx. Normal z * h x’, ‘z’]
+            IN_MEASURABLE_BOREL_CMUL)
+ >> impl_tac
+ >- (METIS_TAC [])
+ >> ‘!x. x IN space a ==> (Normal z * h x = g x)’ by rw [Abbr ‘h’]
+ >> DISCH_TAC
+ >> MP_TAC (Q.SPECL [‘a’, ‘g’, ‘λx. Normal z * h x’]
+            IN_MEASURABLE_BOREL_EQ')
+ >> impl_tac
+ >> BETA_TAC
+ >- (METIS_TAC [])
+ >> simp []
+QED
+
+(* ------------------------------------------------------------------------- *)
+(*  Expectation                                                              *)
+(* ------------------------------------------------------------------------- *)
+
+Theorem expectation_linear:
+  ∀p X Y.
+          prob_space p ∧
+          real_random_variable X p ∧
+          integrable p X ∧
+          real_random_variable Y p ∧
+          integrable p Y ⇒
+          expectation p (λx. X x + Y x) = expectation p X + expectation p Y
+Proof
+    rw [expectation_def, prob_space_def, real_random_variable_def, p_space_def]
+ >> MATCH_MP_TAC integral_add
+ >> simp []
+QED
+
+Theorem expectation_linear':
+  ∀p X Y.
+          prob_space p ∧
+          random_variable X p borel ∧
+          integrable p (Normal o X) ∧
+          random_variable Y p borel ∧
+          integrable p (Normal o Y) ⇒
+          expectation p (Normal o (λx. X x + Y x)) =
+          expectation p (Normal o X) + expectation p (Normal o Y)
+Proof
+    rw []
+ >> MP_TAC (Q.SPECL [‘p’, ‘Normal o X’, ‘Normal o Y’]
+            expectation_linear)
+ >> simp []
+ >> STRIP_TAC
+ >> Know ‘expectation p (λx. Normal (X x) + Normal (Y x)) =
+          expectation p (Normal ∘ (λx. X x + Y x))’
+ >- (MATCH_MP_TAC expectation_cong \\
+     rw[extreal_add_eq])
+ >> DISCH_TAC
+ >> FULL_SIMP_TAC std_ss [integrable_def]
+ >> ‘real_random_variable (Normal ∘ X) p’
+     by rw [real_random_variable_def, random_variable_def, p_space_def, events_def]
+ >> ‘real_random_variable (Normal ∘ Y) p’
+     by rw [real_random_variable_def, random_variable_def, p_space_def, events_def]
+ >> FULL_SIMP_TAC std_ss []
+QED
+
+Theorem expectation_pos:
+    ∀p X. prob_space p ∧
+          real_random_variable X p ∧
+          integrable p X ∧
+          (∀x. x IN p_space p ⇒ 0 ≤ X x) ⇒
+          0 ≤ expectation p X
+Proof
+    rw [expectation_def, prob_space_def, real_random_variable_def, p_space_def]
+ >> MATCH_MP_TAC integral_pos
+ >> fs [prob_space_def, p_space_def]
+QED
+
+Theorem expectation_pos':
+  ∀p X. prob_space p ∧
+        random_variable X p borel ∧
+        integrable p (Normal o X) ∧
+        (∀x. x IN p_space p ⇒ 0 ≤ (Normal o X) x) ⇒
+        0 ≤ expectation p (Normal o X)
+Proof
+    rw []
+ >> MP_TAC (Q.SPECL [‘p’, ‘Normal o X’]
+            expectation_pos)
+ >> fs []
+ >> Know ‘real_random_variable (Normal ∘ X) p’
+ >- (rw [real_random_variable_def] \\
+     FULL_SIMP_TAC std_ss [real_random_variable_def, random_variable_def, p_space_def, events_def] \\
+     METIS_TAC [IN_MEASURABLE_BOREL_IMP_BOREL])
+ >> fs []
+QED
+
+Theorem expectation_mono:
+    ∀p X Y.
+            prob_space p ∧
+            real_random_variable X p ∧
+            integrable p X ∧
+            real_random_variable Y p ∧
+            integrable p Y ∧
+            (∀x. x IN p_space p ⇒ X x ≤ Y x) ⇒
+            expectation p X ≤ expectation p Y
+Proof
+    rw []
+ >> Q.ABBREV_TAC ‘Z = λx. Y x - X x’
+ >> ‘∀x. x IN p_space p ⇒ Z x = Y x - X x’ by rw [Abbr ‘Z’]
+ >> ‘real_random_variable Z p’ by rw [Abbr ‘Z’, real_random_variable_sub]
+ >> Know ‘∀x. x IN p_space p ⇒ 0 ≤ Z x’
+ >- (fs [Abbr ‘Z’, real_random_variable_def] \\
+     METIS_TAC [sub_zero_le])
+ >> DISCH_TAC
+ >> Know ‘integrable p Z’
+ >- (fs [Abbr ‘Z’] \\
+     MP_TAC (Q.SPECL [‘p’, ‘Y’, ‘X’]
+             integrable_sub') \\
+     fs [prob_space_def])
+ >> DISCH_TAC
+ >> Know ‘0 ≤ expectation p Z’
+ >- (irule expectation_pos \\
+     simp [])
+ >> DISCH_TAC
+ >> Know ‘∀x. x IN p_space p ⇒ Z x + X x = Y x’
+ >- (fs [Abbr ‘Z’, real_random_variable_def] \\
+     GEN_TAC \\
+     STRIP_TAC \\
+     METIS_TAC [sub_add])
+ >> DISCH_TAC
+ >> Know ‘expectation p (λx. Z x + X x) =
+          expectation p (λx. Y x)’
+ >- (MATCH_MP_TAC expectation_cong \\
+     rw [])
+ >> DISCH_TAC
+ >> Know ‘expectation p (λx. Z x + X x) =
+          expectation p Z + expectation p X’
+ >- (MATCH_MP_TAC expectation_linear \\
+     simp [])
+ >> rpt STRIP_TAC
+ >> ‘expectation p (λx. Y x) =
+     expectation p Z + expectation p X’ by fs []
+ >> ‘expectation p (λx. Y x) = expectation p Y’ by METIS_TAC []
+ >> FULL_SIMP_TAC std_ss []
+ >> POP_ORW
+ >> ‘expectation p X ≠ PosInf ∧ expectation p X ≠ NegInf’
+    by METIS_TAC [expectation_finite]
+ >> ‘expectation p Z ≠ PosInf ∧ expectation p Z ≠ NegInf’
+    by METIS_TAC [expectation_finite]
+ >> ‘expectation p Z + expectation p X =
+     expectation p X + expectation p Z’ by METIS_TAC [add_comm]
+ >> POP_ORW
+ >> METIS_TAC [le_addr_imp]
+QED
+
+Theorem expectation_mono':
+    ∀p X Y.
+            prob_space p ∧
+            random_variable X p borel ∧
+            integrable p (Normal o X) ∧
+            random_variable Y p borel ∧
+            integrable p (Normal o Y) ∧
+            (∀x. X x ≤ Y x) ⇒
+            expectation p (Normal o X) ≤ expectation p (Normal o Y)
+Proof
+    rw []
+ >> MP_TAC (Q.SPECL [‘p’, ‘Normal o X’, ‘Normal o Y’]
+            expectation_mono)
+ >> fs []
+ >> STRIP_TAC
+ >> Know ‘real_random_variable (Normal ∘ X) p’
+ >- (fs [real_random_variable_def, random_variable_def] \\
+     irule IN_MEASURABLE_BOREL_IMP_BOREL' \\
+     FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA_BOREL, prob_space_def, p_space_def, events_def, measure_space_def])
+ >> DISCH_TAC
+ >> Know ‘real_random_variable (Normal ∘ Y) p’
+ >- (fs [real_random_variable_def, random_variable_def] \\
+     irule IN_MEASURABLE_BOREL_IMP_BOREL' \\
+     FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA_BOREL, prob_space_def, p_space_def, events_def, measure_space_def])
+ >> DISCH_TAC
+ >> fs []
+QED
+
 (* ------------------------------------------------------------------------- *)
 (*  Taylor Theorem                                                           *)
 (* ------------------------------------------------------------------------- *)
-
 
 Theorem TAYLOR_REMAINDER:
   ∀(diff:num -> real -> real) n (x:real).
@@ -951,143 +1144,57 @@ Proof
  >> FULL_SIMP_TAC std_ss []
 QED
 
-Theorem IN_MEASURABLE_BOREL_SUM_CMUL:
-    ∀a f g s z.
-               FINITE s ∧ sigma_algebra a ∧ (∀i. i ∈ s ⇒ f i ∈ Borel_measurable a) ∧
-               (∀x. x ∈ space a ⇒ g x = Normal z * ∑ (λi. f i x) s) ⇒
-               g ∈ Borel_measurable a
+Theorem TAYLOR_REMAINDER_EXPECTATION:
+  ∀p diff n (X: 'a -> real).
+     prob_space p ∧ integrable p (Normal o X) ⇒
+     ∃M (t: real).
+               abs (Normal (diff n t)) ≤ M ⇒
+               expectation p (λx. abs (Normal (diff n t / &FACT n) * (Normal ∘ X) x pow n)) ≤
+               M / Normal (&FACT n) * expectation p (λx. abs ((Normal ∘ X) x) pow n)
 Proof
-    RW_TAC std_ss []
- >> Cases_on `Normal z = 0`
- >- METIS_TAC [IN_MEASURABLE_BOREL_CONST, mul_lzero]
- >> Q.ABBREV_TAC ‘h = λx. ∑ (λi. (f: β -> α -> extreal) i x) s’
- >> ‘∀x. h x = ∑ (λi. f i x) s’ by rw[Abbr ‘h’]
- >> MP_TAC (Q.SPECL [‘a’, ‘(f: 'b -> 'a -> extreal)’, ‘h’, ‘s’]
-            IN_MEASURABLE_BOREL_SUM')
- >> impl_tac
- >- (METIS_TAC [])
- >> DISCH_TAC
- >> MP_TAC (Q.SPECL [‘a’, ‘h’, ‘λx. Normal z * h x’, ‘z’]
-            IN_MEASURABLE_BOREL_CMUL)
- >> impl_tac
- >- (METIS_TAC [])
- >> ‘!x. x IN space a ==> (Normal z * h x = g x)’ by rw [Abbr ‘h’]
- >> DISCH_TAC
- >> MP_TAC (Q.SPECL [‘a’, ‘g’, ‘λx. Normal z * h x’]
-            IN_MEASURABLE_BOREL_EQ')
- >> impl_tac
- >> BETA_TAC
- >- (METIS_TAC [])
- >> simp []
-QED
-
-Theorem expectation_linear:
-  ∀p X Y.
-          prob_space p ∧
-          real_random_variable X p ∧
-          integrable p X ∧
-          real_random_variable Y p ∧
-          integrable p Y ⇒
-          expectation p (λx. X x + Y x) = expectation p X + expectation p Y
-Proof
-    rw [expectation_def, prob_space_def, real_random_variable_def, p_space_def]
- >> MATCH_MP_TAC integral_add
- >> simp []
-QED
-
-Theorem expectation_linear':
-  ∀p X Y.
-    prob_space p ∧
-    random_variable X p borel ∧
-    integrable p (Normal o X) ∧
-    random_variable Y p borel ∧
-    integrable p (Normal o Y) ⇒
-    expectation p (Normal o (λx. X x + Y x)) = expectation p (Normal o X) + expectation p (Normal o Y)
-Proof
-    rw []
- >> MP_TAC (Q.SPECL [‘p’, ‘Normal o X’, ‘Normal o Y’]
-            expectation_linear)
- >> simp []
+    rpt STRIP_TAC
+ >> MP_TAC (Q.SPECL [‘diff’, ‘n’, ‘X x’]
+            TAYLOR_REMAINDER')
+ >> DISCH_THEN (Q.X_CHOOSE_THEN ‘M’
+               (Q.X_CHOOSE_THEN ‘t’ ASSUME_TAC))
+ >> qexistsl [‘M’, ‘t’]
  >> STRIP_TAC
- >> Know ‘expectation p (λx. Normal (X x) + Normal (Y x)) =
-          expectation p (Normal ∘ (λx. X x + Y x))’
- >- (MATCH_MP_TAC expectation_cong \\
-     rw[extreal_add_eq])
- >> DISCH_TAC
- >> FULL_SIMP_TAC std_ss [integrable_def]
- >> Know ‘real_random_variable (Normal ∘ X) p’
- >- (rw [real_random_variable_def, random_variable_def, p_space_def, events_def])
- >> Know ‘real_random_variable (Normal ∘ Y) p’
- >- (rw [real_random_variable_def, random_variable_def, p_space_def, events_def])
  >> FULL_SIMP_TAC std_ss []
-QED
-
-Theorem expectation_mono:
-    ∀p X Y.
-            prob_space p ∧
-            random_variable X p borel ∧
-            integrable p (Normal o X) ∧
-            random_variable Y p borel ∧
-            integrable p (Normal o Y) ∧
-            (∀x. X x ≤ Y x) ⇒
-            expectation p (Normal o X) ≤ expectation p (Normal o Y)
-Proof
-    rw []
- >> Q.ABBREV_TAC ‘Z = λx. Y x - X x’
- >> ‘∀x. Z x = Y x - X x’ by rw [Abbr ‘Z’]
- >> Know ‘0 ≤ expectation p (Normal o Z)’
- >- (‘∀x. 0 ≤ Z x’ by rw [Abbr ‘Z’, REAL_SUB_LE] \\
-     ‘∀x. 0 ≤ (Normal ∘ Z) x’ by METIS_TAC [extreal_le_eq, normal_0, o_DEF] \\
-     MATCH_MP_TAC expectation_pos \\
-     simp [])
+ >> ‘∀x'. abs (Normal (X x') pow n) = abs (Normal (X x')) pow n’
+    by rw [extreal_abs_def, extreal_pow_def, POW_ABS]
+ >> Cases_on ‘∀x'. Normal (X x') pow n = 0’
+ >- (fs [expectation_zero, mul_rzero])
+ >> ‘∃x'. Normal (X x') pow n ≠ 0’ by METIS_TAC []
+ >> Know ‘!n. (0: real) < &FACT n’
+ >- (EVAL_TAC \\
+     rw [FACT_LESS, LE_1])
  >> DISCH_TAC
- >> ‘∀x. Z x + X x = Y x’ by METIS_TAC [REAL_EQ_SUB_LADD]
- >> Know ‘expectation p (Normal o (λx. Z x + X x)) =
-          expectation p (Normal o (λx. Y x))’
- >- (MATCH_MP_TAC expectation_cong \\
-     simp [])
+ >> ‘∀n. (0: real) <= &FACT n’ by METIS_TAC [REAL_LT_IMP_LE]
+ >> ‘∀n. (0: real) ≠ &FACT n’ by METIS_TAC [REAL_LT_IMP_NE]
+ >> Know ‘0 ≤ M’
+ >- (simp [sup_le] \\
+     rw [le_sup] \\
+     METIS_TAC [abs_pos, le_trans])
  >> DISCH_TAC
- >> Know ‘integrable p (Normal ∘ Z)’
- >- (fs [Abbr ‘Z’] \\
-     MP_TAC (Q.SPECL [‘p’, ‘Normal o Y’, ‘Normal o X’]
-             integrable_sub') \\
-     simp [prob_space_def] \\
-     ‘(λx. Normal (Y x) − Normal (X x)) = (λx. Normal (Y x - X x))’
-       by METIS_TAC [extreal_sub_def] \\
-     ‘(λx. Normal (Y x - X x)) = Normal ∘ (λx. Y x − X x)’ by rw [o_DEF] \\
-     ‘(λx. Normal (Y x) − Normal (X x)) = Normal ∘ (λx. Y x − X x)’ by fs [] \\
+ >> ‘NegInf ≠ M’ by METIS_TAC [extreal_0_simps, lt_trans]
+ >> Q.ABBREV_TAC ‘A = λx'. abs (Normal (X x')) pow n’
+ >> ‘∀x'. 0 ≤ A x'’ by METIS_TAC [abs_pos]
+ >> ‘integrable p A’ by cheat
+ >> ‘expectation p A ≠ PosInf ∧ expectation p A ≠ NegInf’ by rw [expectation_finite]
+ >> ‘∃r. expectation p A = Normal r’ by METIS_TAC [extreal_cases]
+ >> rw []
+ >> Cases_on ‘M = PosInf’
+ >- (‘M / Normal (&FACT n) = PosInf’ by METIS_TAC [infty_div] \\
      POP_ORW \\
-     FULL_SIMP_TAC std_ss [prob_space_def])
- >> DISCH_TAC
- >> Know ‘expectation p (Normal ∘ (λx. Z x + X x)) =
-          expectation p (Normal ∘ Z) + expectation p (Normal ∘ X)’
- >- (MATCH_MP_TAC expectation_linear' \\
-     simp [] \\
-     fs [Abbr ‘Z’, random_variable_def] \\
-     MATCH_MP_TAC in_borel_measurable_sub \\
-     qexistsl [‘Y’, ‘X’] \\
-     fs [prob_space_def, p_space_def, events_def])
- >> DISCH_TAC
- >> ‘expectation p (Normal ∘ (λx. Y x)) =
-     expectation p (Normal ∘ Z) + expectation p (Normal ∘ X)’ by fs []
- >> ‘Normal ∘ (λx. Y x) = Normal ∘ Y’ by METIS_TAC [o_DEF]
- >> FULL_SIMP_TAC std_ss []
- >> POP_ORW
- >> ‘expectation p (Normal ∘ X) ≠ PosInf ∧ expectation p (Normal ∘ X) ≠ NegInf’
-     by METIS_TAC [expectation_finite]
- >> ‘expectation p (Normal ∘ Z) ≠ PosInf ∧ expectation p (Normal ∘ Z) ≠ NegInf’
-     by METIS_TAC [expectation_finite]
- >> ‘expectation p (Normal ∘ Z) + expectation p (Normal ∘ X) =
-     expectation p (Normal ∘ X) + expectation p (Normal ∘ Z)’ by METIS_TAC [add_comm]
- >> POP_ORW
- >> METIS_TAC [le_addr_imp]
+     cheat
+     (* METIS_TAC [extreal_mul_def] \\ *)
+      )
+ >> ‘∃r. M = Normal r’ by METIS_TAC [extreal_cases]
+ >> rw []
+ >> cheat
 QED
 
 (*
-Theorem TAYLOR_REMAINDER_EXPECTATION:
-Proof
-QED
-
 Theorem TAYLOR_THEOREM_EXPECTATION:
   ∀p X Y diff (M: extreal) f.
     prob_space p ∧
@@ -1095,6 +1202,7 @@ Theorem TAYLOR_THEOREM_EXPECTATION:
     random_variable Y p borel ∧
     third_moment p (Normal o X) < PosInf ⇒
 Proof
+
 QED
 *)
 
