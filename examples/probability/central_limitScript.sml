@@ -704,7 +704,6 @@ Proof
  >> simp [REAL_ADD_ASSOC]
 QED
 
-
 Theorem IN_MEASURABLE_BOREL_SUM_CMUL:
     ∀a f g s z.
                FINITE s ∧ sigma_algebra a ∧ (∀i. i ∈ s ⇒ f i ∈ Borel_measurable a) ∧
@@ -1179,7 +1178,44 @@ Proof
  >> ‘NegInf ≠ M’ by METIS_TAC [extreal_0_simps, lt_trans]
  >> Q.ABBREV_TAC ‘A = λx'. abs (Normal (X x')) pow n’
  >> ‘∀x'. 0 ≤ A x'’ by METIS_TAC [abs_pos]
- >> ‘integrable p A’ by cheat
+ >> Know ‘integrable p A’
+ >- (fs [Abbr ‘A’] \\
+     Know ‘integrable p (λx'. abs (Normal (X x')))’
+     >- (MP_TAC (Q.SPECL [‘p’, ‘Normal o X’]
+                 integrable_abs) \\
+         fs [prob_space_def, o_DEF]) \\
+     DISCH_TAC \\
+     fs [integrable_def] \\
+     CONJ_TAC
+     (* (λx'. abs (Normal (X x')) pow n) ∈
+         Borel_measurable (measurable_space p) *)
+     >- (Know ‘(λx'. Normal (X x') pow n) ∈
+                Borel_measurable (measurable_space p)’
+     >- (MP_TAC (Q.SPECL [‘n’, ‘measurable_space p’, ‘Normal o X’]
+                 IN_MEASURABLE_BOREL_POW) \\
+         simp []) \\
+     DISCH_TAC \\
+     MP_TAC (Q.SPECL [‘measurable_space p’, ‘λx'. Normal (X x') pow n’]
+             IN_MEASURABLE_BOREL_ABS') \\
+     fs [o_DEF, SIGMA_ALGEBRA_BOREL, prob_space_def, p_space_def, events_def, measure_space_def] \\
+     simp []) \\
+     Cases_on ‘n = 0’
+     >- (fs [] \\
+         Know ‘∫⁺ p (λx'. 1) ≠ +∞’
+         >- (MP_TAC (Q.SPECL [‘p’, ‘1’]
+                     pos_fn_integral_const) \\
+             FULL_SIMP_TAC std_ss [prob_space_def] \\
+             fs [cj 2 extreal_not_infty, normal_1] \\
+             simp []) \\
+             cheat)  \\
+     CONJ_TAC
+     (* ∫⁺ p (λx'. abs (Normal (X x')) pow n)⁺ ≠ +∞ *)
+     >- (Know ‘∫⁺ p (abs o (Normal ∘ X))⁺ ≠ +∞’
+         >- (cheat) \\
+         cheat) \\
+        (* ∫⁺ p (λx'. abs (Normal (X x')) pow n)⁻ ≠ +∞ *)
+     cheat)
+ >> DISCH_TAC
  >> ‘expectation p A ≠ PosInf ∧ expectation p A ≠ NegInf’ by rw [expectation_finite]
  >> ‘∃r. expectation p A = Normal r’ by METIS_TAC [extreal_cases]
  >> rw []
