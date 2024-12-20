@@ -902,6 +902,74 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 Theorem TAYLOR_REMAINDER:
+  ∀(diff :num -> real -> real) (n :num) x.
+                          ∃(M :extreal) t.
+                                           abs (Normal (diff n t)) ≤ M ⇒
+                                           abs (Normal ((diff n t / ((&FACT n) :real))) * Normal x pow n) ≤
+                                           M / (Normal (&FACT n)) * abs (Normal x) pow n
+Proof
+    rpt GEN_TAC
+ >> qexistsl [‘M’, ‘t’]
+ >> STRIP_TAC
+ >> ‘Normal x pow n = Normal (x pow n)’ by rw [extreal_pow_def]
+ >> POP_ORW
+ >> ‘abs (Normal x) = Normal (abs x)’ by METIS_TAC [extreal_abs_def]
+ >> POP_ORW
+ >> ‘Normal (abs x) pow n = Normal ((abs x) pow n)’ by rw [extreal_pow_def]
+ >> POP_ORW
+ >> ‘abs x pow n = abs (x pow n)’ by rw [POW_ABS]
+ >> POP_ORW
+ >> Cases_on ‘x pow n = 0’
+ >- (‘abs (Normal (diff n t / &FACT n) * Normal (x pow n)) = 0’
+      by METIS_TAC [normal_0, mul_rzero, abs_0] \\
+     ‘M / Normal (&FACT n) * Normal (abs (x pow n)) = 0’
+      by METIS_TAC [ABS_0, normal_0, mul_rzero] \\
+     simp [])
+ >> Know ‘!n. (0: real) < &FACT n’
+ >- (EVAL_TAC \\
+     rw [FACT_LESS, LE_1])
+ >> DISCH_TAC
+ >> ‘∀n. (0: real) <= &FACT n’ by METIS_TAC [REAL_LT_IMP_LE]
+ >> ‘∀n. (0: real) ≠ &FACT n’ by METIS_TAC [REAL_LT_IMP_NE]
+ >> Know ‘0 ≤ M’
+ >- (simp [sup_le] \\
+     rw [le_sup] \\
+     METIS_TAC [abs_pos, le_trans])
+ >> DISCH_TAC
+ >> ‘NegInf ≠ M’ by METIS_TAC [extreal_0_simps, lt_trans]
+ >> Cases_on ‘M = PosInf’
+ >- (‘M / Normal (&FACT n) = PosInf’ by METIS_TAC [infty_div] \\
+     ‘0 < Normal (abs (x pow n))’ by rw [abs_gt_0] \\
+     ‘M / Normal (&FACT n) * Normal (abs (x pow n)) = PosInf’ by METIS_TAC [mul_infty] \\
+     rw [])
+ >> ‘∃r. M = Normal r’ by METIS_TAC [extreal_cases]
+ >> rw []
+ >> ‘Normal (diff n t / &FACT n) * Normal (x pow n) =
+     Normal (diff n t / &FACT n * x pow n)’ by METIS_TAC [extreal_mul_def]
+ >> POP_ORW
+ >> ‘Normal r / Normal (&FACT n) = Normal (r / &FACT n)’ by METIS_TAC [extreal_div_eq]
+ >> POP_ORW
+ >> ‘Normal (r / &FACT n) * Normal (abs (x pow n)) =
+     Normal (r / &FACT n * abs (x pow n))’ by METIS_TAC [extreal_mul_def]
+ >> POP_ORW
+ >> ‘abs (Normal (diff n t / &FACT n * x pow n)) =
+     Normal (abs (diff n t / &FACT n * x pow n))’ by METIS_TAC [extreal_abs_def]
+ >> POP_ORW
+ >> ‘abs (Normal (diff n t)) = Normal (abs (diff n t))’ by METIS_TAC [extreal_abs_def]
+ >> FULL_SIMP_TAC std_ss [extreal_le_eq]
+ >> ‘abs (diff n t) / &FACT n ≤ r / &FACT n’ by rw [REAL_LE_RDIV_CANCEL]
+ >> ‘abs (&FACT n) = (&FACT n: real)’ by rw [ABS_REFL]
+ >> ‘abs (diff n t) / &FACT n = abs (diff n t / &FACT n)’ by METIS_TAC [GSYM ABS_DIV]
+ >> FULL_SIMP_TAC std_ss []
+ >> ‘0 < abs (x pow n)’ by METIS_TAC [ABS_NZ]
+ >> ‘abs (diff n t / &FACT n) * abs (x pow n) ≤ r / &FACT n * abs (x pow n)’
+     by METIS_TAC [GSYM REAL_LE_RMUL]
+ >> ‘abs (diff n t / &FACT n) * abs (x pow n) = abs (diff n t / &FACT n * x pow n)’
+     by METIS_TAC [GSYM ABS_MUL]
+ >> FULL_SIMP_TAC std_ss []
+QED
+
+Theorem TAYLOR_REMAINDER':
   ∀(diff:num -> real -> real) n (x:real).
     ∃M t.
           abs (diff n t) ≤ M ⇒
@@ -1075,92 +1143,84 @@ Proof
  >> rw []
 QED
 
-Theorem TAYLOR_REMAINDER':
-  ∀(diff :num -> real -> real) (n :num) x.
-                          ∃(M :extreal) t.
-                                           abs (Normal (diff n t)) ≤ M ⇒
-                                           abs (Normal ((diff n t / ((&FACT n) :real))) * Normal x pow n) ≤
-                                           M / (Normal (&FACT n)) * abs (Normal x) pow n
+Theorem TAYLOR_REMAINDER_EXPECTATION:
+  ∀p diff n X.
+               prob_space p ∧ random_variable X p borel ∧
+               integrable p (Normal o X) ⇒
+               ∃M (t: real).
+                             abs (Normal (diff n t)) ≤ M ⇒
+                             expectation p (λx. abs (Normal (diff n t / &FACT n) * (Normal ∘ X) x pow n)) ≤
+                             M / Normal (&FACT n) * expectation p (λx. abs ((Normal ∘ X) x) pow n)
 Proof
-    rpt GEN_TAC
+    rpt STRIP_TAC
+ >> MP_TAC (Q.SPECL [‘diff’, ‘n’, ‘X x’]
+            TAYLOR_REMAINDER)
+ >> DISCH_THEN (Q.X_CHOOSE_THEN ‘M’
+               (Q.X_CHOOSE_THEN ‘t’ ASSUME_TAC))
  >> qexistsl [‘M’, ‘t’]
  >> STRIP_TAC
- >> ‘Normal x pow n = Normal (x pow n)’ by rw [extreal_pow_def]
+ >> fs []
+ >> ‘∀x'. abs (Normal (X x') pow n) = abs (Normal (X x')) pow n’
+    by rw [extreal_abs_def, extreal_pow_def, POW_ABS]
+ >> ‘∀x'. Normal (X x') pow n = Normal ((X x') pow n)’ by rw [extreal_pow_def]
+ >> ‘∀x'. abs (Normal (diff n t / &FACT n) * Normal (X x') pow n) =
+          abs (Normal ((diff n t / &FACT n) * (X x') pow n))’ by METIS_TAC [extreal_mul_eq]
+ >> Know ‘0 ≤ M’
+ >- (simp [sup_le] \\
+     rw [le_sup] \\
+     METIS_TAC [abs_pos, le_trans])
+ >> DISCH_TAC
+ >> ‘M ≠ NegInf’ by METIS_TAC [extreal_0_simps, lt_trans]
+ >> Know ‘M ≠ PosInf’
+ >- (cheat)
+ >> DISCH_TAC
+ >> ‘∃r. M = Normal r’ by METIS_TAC [extreal_cases]
  >> POP_ORW
- >> ‘abs (Normal x) = Normal (abs x)’ by METIS_TAC [extreal_abs_def]
- >> POP_ORW
- >> ‘Normal (abs x) pow n = Normal ((abs x) pow n)’ by rw [extreal_pow_def]
- >> POP_ORW
- >> ‘abs x pow n = abs (x pow n)’ by rw [POW_ABS]
- >> POP_ORW
- >> Cases_on ‘x pow n = 0’
- >- (‘abs (Normal (diff n t / &FACT n) * Normal (x pow n)) = 0’
-      by METIS_TAC [normal_0, mul_rzero, abs_0] \\
-     ‘M / Normal (&FACT n) * Normal (abs (x pow n)) = 0’
-      by METIS_TAC [ABS_0, normal_0, mul_rzero] \\
-     simp [])
  >> Know ‘!n. (0: real) < &FACT n’
  >- (EVAL_TAC \\
      rw [FACT_LESS, LE_1])
  >> DISCH_TAC
  >> ‘∀n. (0: real) <= &FACT n’ by METIS_TAC [REAL_LT_IMP_LE]
  >> ‘∀n. (0: real) ≠ &FACT n’ by METIS_TAC [REAL_LT_IMP_NE]
- >> Know ‘0 ≤ M’
- >- (simp [sup_le] \\
-     rw [le_sup] \\
-     METIS_TAC [abs_pos, le_trans])
- >> DISCH_TAC
- >> ‘NegInf ≠ M’ by METIS_TAC [extreal_0_simps, lt_trans]
- >> Cases_on ‘M = PosInf’
- >- (‘M / Normal (&FACT n) = PosInf’ by METIS_TAC [infty_div] \\
-     ‘0 < Normal (abs (x pow n))’ by rw [abs_gt_0] \\
-     ‘M / Normal (&FACT n) * Normal (abs (x pow n)) = PosInf’ by METIS_TAC [mul_infty] \\
-     rw [])
- >> ‘∃r. M = Normal r’ by METIS_TAC [extreal_cases]
- >> rw []
- >> ‘Normal (diff n t / &FACT n) * Normal (x pow n) =
-     Normal (diff n t / &FACT n * x pow n)’ by METIS_TAC [extreal_mul_def]
- >> POP_ORW
  >> ‘Normal r / Normal (&FACT n) = Normal (r / &FACT n)’ by METIS_TAC [extreal_div_eq]
  >> POP_ORW
- >> ‘Normal (r / &FACT n) * Normal (abs (x pow n)) =
-     Normal (r / &FACT n * abs (x pow n))’ by METIS_TAC [extreal_mul_def]
+ >> Q.ABBREV_TAC ‘c = r / &FACT n’
+ >> ‘Normal c * expectation p (λx'. abs (Normal (X x')) pow n) =
+     expectation p (λx'. Normal c * abs (Normal (X x')) pow n)’ by cheat
  >> POP_ORW
- >> ‘abs (Normal (diff n t / &FACT n * x pow n)) =
-     Normal (abs (diff n t / &FACT n * x pow n))’ by METIS_TAC [extreal_abs_def]
- >> POP_ORW
- >> ‘abs (Normal (diff n t)) = Normal (abs (diff n t))’ by METIS_TAC [extreal_abs_def]
- >> FULL_SIMP_TAC std_ss [extreal_le_eq]
- >> ‘abs (diff n t) / &FACT n ≤ r / &FACT n’ by rw [REAL_LE_RDIV_CANCEL]
- >> ‘abs (&FACT n) = (&FACT n: real)’ by rw [ABS_REFL]
- >> ‘abs (diff n t) / &FACT n = abs (diff n t / &FACT n)’ by METIS_TAC [GSYM ABS_DIV]
- >> FULL_SIMP_TAC std_ss []
- >> ‘0 < abs (x pow n)’ by METIS_TAC [ABS_NZ]
- >> ‘abs (diff n t / &FACT n) * abs (x pow n) ≤ r / &FACT n * abs (x pow n)’
-     by METIS_TAC [GSYM REAL_LE_RMUL]
- >> ‘abs (diff n t / &FACT n) * abs (x pow n) = abs (diff n t / &FACT n * x pow n)’
-     by METIS_TAC [GSYM ABS_MUL]
- >> FULL_SIMP_TAC std_ss []
+ >> Q.UNABBREV_TAC ‘c’
+ >> irule expectation_mono
+ >> fs []
+ >> CONJ_TAC
+    (* ∀x'.
+          x' ∈ p_space p ⇒
+          abs (Normal ((&FACT n)⁻¹ * diff n t * X x' pow n)) ≤
+          Normal (r / &FACT n) * abs (Normal (X x')) pow n *)
+ >- (cheat)
+ >> CONJ_TAC
+    (* integrable p
+          (λx'. abs (Normal ((&FACT n)⁻¹ * diff n t * X x' pow n)))*)
+ >- (cheat)
+ >> CONJ_TAC
+    (* integrable p (λx'. Normal (r / &FACT n) * abs (Normal (X x')) pow n) *)
+ >- (cheat)
+ >> CONJ_TAC
+    (* real_random_variable
+          (λx'. abs (Normal ((&FACT n)⁻¹ * diff n t * X x' pow n))) p *)
+ >- (cheat)
+    (* real_random_variable
+          (λx'. Normal (r / &FACT n) * abs (Normal (X x')) pow n) p *)
+ >> cheat
 QED
 
-Theorem TAYLOR_REMAINDER_EXPECTATION:
-  ∀p diff n (X: 'a -> real).
-     prob_space p ∧ integrable p (Normal o X) ⇒
-     ∃M (t: real).
-               abs (Normal (diff n t)) ≤ M ⇒
-               expectation p (λx. abs (Normal (diff n t / &FACT n) * (Normal ∘ X) x pow n)) ≤
-               M / Normal (&FACT n) * expectation p (λx. abs ((Normal ∘ X) x) pow n)
-Proof
-    rpt STRIP_TAC
- >> MP_TAC (Q.SPECL [‘diff’, ‘n’, ‘X x’]
-            TAYLOR_REMAINDER')
- >> DISCH_THEN (Q.X_CHOOSE_THEN ‘M’
-               (Q.X_CHOOSE_THEN ‘t’ ASSUME_TAC))
- >> qexistsl [‘M’, ‘t’]
- >> STRIP_TAC
- >> FULL_SIMP_TAC std_ss []
- >> ‘∀x'. abs (Normal (X x') pow n) = abs (Normal (X x')) pow n’
-    by rw [extreal_abs_def, extreal_pow_def, POW_ABS]
+(*
+    >> MP_TAC (Q.SPECL [‘p’, ‘λx'. abs (Normal (diff n t / &FACT n) * Normal (X x') pow n)’,
+                        ‘M / Normal (&FACT n) * expectation p (λx'. abs (Normal (X x')) pow n)’]
+                expectation_mono')
+
+
+
+
  >> Cases_on ‘∀x'. Normal (X x') pow n = 0’
  >- (fs [expectation_zero, mul_rzero])
  >> ‘∃x'. Normal (X x') pow n ≠ 0’ by METIS_TAC []
@@ -1228,7 +1288,8 @@ Proof
  >> ‘∃r. M = Normal r’ by METIS_TAC [extreal_cases]
  >> rw []
  >> cheat
-QED
+ *)
+
 
 (*
 Theorem TAYLOR_THEOREM_EXPECTATION:
