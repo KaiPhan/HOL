@@ -1173,18 +1173,25 @@ Proof
   >> Induct_on ‘n’
   >- (FULL_SIMP_TAC std_ss [pow0] \\
       METIS_TAC [in_borel_measurable_const])
-  >> DISCH_TAC
-  >> ‘∀x. x ∈ space a ⇒ f x pow SUC n = f x pow (n + 1)’ by rw [ADD1]
-  >> ‘∀x. x ∈ space a ⇒ f x pow (n + 1) = f x pow n * f x pow 1’ by rw [POW_ADD]
-  >> MP_TAC (Q.SPECL [‘a’, ‘f’, ‘λx. f x pow n’, ‘λx. f x * f x pow n’]
-             in_borel_measurable_mul)
+  >> ‘!x. x IN space a ==> f x pow SUC n = f x pow (n + 1)’ by rw [ADD1]
+  >> ‘!x. x IN space a ==> f x pow (n + 1) = f x pow n * f x pow 1’ by rw [POW_ADD]
+  >> FULL_SIMP_TAC std_ss []
+  >> fs [pow_1]
+  >> STRIP_TAC
+  >> irule in_borel_measurable_mul
   >> simp []
-  >> impl_tac
-  >- (cheat)
+  >> qexistsl [‘f’, ‘λx. f x pow n’]
+  >> simp []
   >> cheat
 QED
 
-
+Theorem expectation_gt_0:
+  ∀p X.
+    prob_space p ∧ (∀x. x ∈ p_space p ⇒ 0 < X x) ⇒
+    0 < expectation p X
+Proof
+  cheat
+QED
 
 Theorem TAYLOR_REMAINDER_EXPECTATION:
   ∀p diff n X.
@@ -1203,113 +1210,145 @@ Proof
                (Q.X_CHOOSE_THEN ‘t’ ASSUME_TAC))
  >> qexistsl [‘M’, ‘t’]
  >> STRIP_TAC
- >> fs []
- >> Know ‘(λx'. (X x') pow n) ∈ borel_measurable (measurable_space p)’
- >- (irule in_borel_measurable_pow \\
-     fs [SIGMA_ALGEBRA_BOREL, prob_space_def] \\
-     qexistsl_tac [‘X’, ‘n’] \\
-     fs [random_variable_def, p_space_def, events_def] \\
-     METIS_TAC [])
+ >> fs [o_DEF]
+ >> Know ‘0 ≤ M’
+ >- (simp [sup_le] \\
+     rw [le_sup] \\
+     METIS_TAC [abs_pos, le_trans])
  >> DISCH_TAC
- >> Know ‘integrable p (λx'. abs (Normal (X x')) pow n)’
- >- (cheat)
+ >> ‘M ≠ NegInf’ by METIS_TAC [extreal_0_simps, lt_trans]
+ >> Know ‘!n. (0: real) < &FACT n’
+ >- (EVAL_TAC \\
+     rw [FACT_LESS, LE_1])
  >> DISCH_TAC
- >> ‘∀x'. abs (Normal (X x') pow n) = abs (Normal (X x')) pow n’
+ >> ‘∀n. (0: real) <= &FACT n’ by METIS_TAC [REAL_LT_IMP_LE]
+ >> ‘∀n. (0: real) ≠ &FACT n’ by METIS_TAC [REAL_LT_IMP_NE]
+ >> ‘∀x'. abs (Normal (X x')) pow n = abs (Normal (X x') pow n)’
      by rw [extreal_abs_def, extreal_pow_def, POW_ABS]
+ >> rw []
  >> ‘∀x'. Normal (X x') pow n = Normal ((X x') pow n)’ by rw [extreal_pow_def]
- >> ‘∀x'. abs (Normal (diff n t / &FACT n) * Normal (X x') pow n) =
-          abs (Normal ((diff n t / &FACT n) * (X x') pow n))’ by METIS_TAC [extreal_mul_eq]
- >> fs []
- >> MP_TAC (Q.SPECL [‘p’, ‘λx'. abs (Normal ((&FACT n)⁻¹ *
-                                    (diff : num -> real -> real) n (t : real) * X x' pow n))’,
-                          ‘λx'. M / Normal (&FACT n) * abs (Normal (X x')) pow n’]
-            expectation_mono)
- >> impl_tac
- >> fs []
- >- (CONJ_TAC
-     (* real_random_variable
-        (λx'. abs (Normal (diff n t / &FACT n) * Normal (X x') pow n)) p *)
-     >- (MP_TAC (Q.SPECL [‘p’, ‘λx'. Normal ((&FACT n)⁻¹ *
-                                     (diff : num -> real -> real) n (t : real) * X x' pow n)’]
-                  real_random_variable_abs) \\
-         impl_tac \\
-         fs [real_random_variable_def, random_variable_def, p_space_def, events_def] \\
-         MP_TAC (Q.SPECL [‘λx'. (&FACT n)⁻¹ * (diff : num -> real -> real) n (t : real) * X x' pow n’, ‘p’]
-                 IN_MEASURABLE_BOREL_IMP_BOREL) \\
-         impl_tac
-         >- (irule in_borel_measurable_cmul \\
-             fs [SIGMA_ALGEBRA_BOREL, prob_space_def] \\
-             qexistsl_tac [‘λx'. X x' pow n’, ‘(&FACT n)⁻¹ * diff n t’] \\
-             BETA_TAC \\
-             METIS_TAC []) \\
-         METIS_TAC [])
-    >> CONJ_TAC
-    (* integrable p
-          (λx'. abs (Normal (diff n t / &FACT n) * Normal (X x') pow n)) *)
-    >- (MP_TAC (Q.SPECL [‘p’, ‘λx'. Normal ((&FACT n)⁻¹ *
-                                    (diff : num -> real -> real) n (t : real) * X x' pow n)’]
-                integrable_abs) \\
-        fs [prob_space_def] \\
-        impl_tac
-         (* integrable p (λx'. Normal ((&FACT n)⁻¹ * diff n t * X x' pow n)) *)
-        >- (‘∀x'. Normal ((&FACT n)⁻¹ * diff n t * X x' pow n) =
-                  Normal ((&FACT n)⁻¹ * diff n t) * Normal (X x' pow n)’
-             by rw [extreal_mul_def] \\
-             POP_ORW \\
-             MP_TAC (Q.SPECL [‘p’, ‘λx'. Normal (X x' pow n)’,
-                                   ‘(&FACT n)⁻¹ * (diff : num -> real -> real) n (t : real)’]
-                     integrable_cmul) \\
-             simp [] \\
-             impl_tac \\
-             simp [o_DEF]) \\
-        simp [o_DEF])
-     >> Know ‘0 ≤ M’
-     >- (simp [sup_le] \\
-         rw [le_sup] \\
-         METIS_TAC [abs_pos, le_trans])
-     >> DISCH_TAC
-     >> ‘M ≠ NegInf’ by METIS_TAC [extreal_0_simps, lt_trans]
-     >> Know ‘M ≠ PosInf’
-     >- (cheat)
-     >> DISCH_TAC
-     >> ‘∃r. M = Normal r’ by METIS_TAC [extreal_cases]
-     >> POP_ORW
-     >> Know ‘!n. (0: real) < &FACT n’
-     >- (EVAL_TAC \\
-         rw [FACT_LESS, LE_1])
-     >> DISCH_TAC
-     >> ‘∀n. (0: real) <= &FACT n’ by METIS_TAC [REAL_LT_IMP_LE]
-     >> ‘∀n. (0: real) ≠ &FACT n’ by METIS_TAC [REAL_LT_IMP_NE]
-     >> ‘Normal r / Normal (&FACT n) = Normal (r / &FACT n)’ by METIS_TAC [extreal_div_eq]
-     >> POP_ORW
-     >> CONJ_TAC
-     (* real_random_variable
-               (λx'. Normal (r / &FACT n) * abs (Normal (X x')) pow n) p *)
-        >- (MP_TAC (Q.SPECL [‘p’, ‘λx'. abs (Normal (X x')) pow n’,
-                                  ‘r / &FACT n’]
-                     real_random_variable_cmul) \\
-            fs [prob_space_def] \\
-            impl_tac
-            >- (MP_TAC (Q.SPECL [‘p’, ‘λx'. Normal (X x') pow n ’] real_random_variable_abs) \\
-                fs [prob_space_def] \\
-                DISCH_TAC \\
-                Know ‘real_random_variable (λx'. Normal (X x' pow n)) p’
-                >- (fs [real_random_variable_def, random_variable_def, p_space_def, events_def] \\
-                    METIS_TAC [IN_MEASURABLE_BOREL_IMP_BOREL]) \\
-                simp []) \\
-            simp [])
-    >> CONJ_TAC
-       (* integrable p (λx'. Normal (r / &FACT n) * abs (Normal (X x')) pow n) *)
-     >- ( MP_TAC (Q.SPECL [‘p’, ‘λx'. abs (Normal (X x')) pow n’,
-                           ‘r / &FACT n’]
-                   integrable_cmul) \\
-          fs [measure_space_def, prob_space_def] \\
-
-        cheat)
-    >> cheat)
-    >> ‘expectation p (λx'. M / Normal (&FACT n) * abs (Normal (X x')) pow n) =
-        M / Normal (&FACT n) * expectation p (λx'. abs (Normal (X x')) pow n)’ by cheat
-    >> simp []
+ >> rw []
+ >> Cases_on ‘∀x'. Normal (X x' pow n) = 0’
+ >- (rw [abs_0, expectation_zero])
+ >> FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
+ >> Cases_on ‘M = PosInf’
+ >- (Know ‘M / Normal (&FACT n) * expectation p (λx'. abs (Normal (X x' pow n))) = PosInf’
+     >- (‘M / Normal (&FACT n) = PosInf’ by METIS_TAC [infty_div] \\
+         POP_ORW \\
+         MATCH_MP_TAC (cj 1 mul_infty) \\
+         ‘0 < abs (Normal (X x' pow n))’ by METIS_TAC [abs_gt_0] \\
+         irule expectation_gt_0 \\
+         BETA_TAC \\
+         CONJ_TAC
+         >- (cheat) \\
+         simp []) \\
+     DISCH_TAC \\
+     rw [])
+ >> ‘∃r. M = Normal r’ by METIS_TAC [extreal_cases]
+ >> FULL_SIMP_TAC std_ss []
+ >> ‘Normal r / Normal (&FACT n) = Normal (r / &FACT n)’ by METIS_TAC [extreal_div_eq]
+ >> POP_ORW
+ >> Know ‘integrable p (λx'. abs (Normal (X x' pow n)))’
+ >- (MP_TAC (Q.SPECL [‘p’, ‘λx. Normal (X x pow n)’]
+             integrable_abs) \\
+     FULL_SIMP_TAC std_ss [prob_space_def, o_DEF])
+ >> DISCH_TAC
+ >> Know ‘expectation p (λx'. Normal (r / &FACT n) * abs (Normal (X x' pow n))) =
+          Normal (r / &FACT n) * expectation p (λx'. abs (Normal (X x' pow n)))’
+ >- (MP_TAC (Q.SPECL [‘p’, ‘λx'. abs (Normal (X x' pow n))’, ‘r / &FACT n’]
+             expectation_cmul) \\
+     simp [])
+ >> DISCH_TAC
+ >> POP_ASSUM (rw o wrap o SYM)
+ >> irule expectation_mono
+ >> BETA_TAC
+ >> simp []
+ >> CONJ_TAC
+  (* ∀x. x ∈ p_space p ⇒
+         abs (Normal (diff n t / &FACT n) * Normal (X x pow n)) ≤
+         Normal (r / &FACT n) * abs (Normal (X x pow n)) *)
+ >- (GEN_TAC \\
+     STRIP_TAC \\
+     ‘abs (Normal (diff n t / &FACT n) * Normal (X x'' pow n)) =
+      abs (Normal (diff n t / &FACT n)) * abs (Normal (X x'' pow n))’ by rw [abs_mul] \\
+     POP_ORW \\
+     irule le_rmul_imp \\
+     simp [abs_pos] \\
+     ‘abs (Normal (diff n t / &FACT n)) =
+      abs (Normal (diff n t) / Normal (&FACT n))’ by METIS_TAC [extreal_div_eq] \\
+     POP_ORW \\
+     Know ‘abs (Normal (diff n t) / Normal (&FACT n)) =
+           abs (Normal (diff n t)) / abs (Normal (&FACT n))’
+     >- (irule abs_div \\
+         simp [extreal_not_infty]) \\
+     Rewr' \\
+     ‘abs (Normal (&FACT n)) = Normal (&FACT n)’ by rw [abs_refl] \\
+     POP_ORW \\
+     ‘Normal r / Normal (&FACT n) = Normal (r / &FACT n)’
+     by METIS_TAC [extreal_div_eq] \\
+     POP_ASSUM (rw o wrap o SYM) \\
+     irule ldiv_le_imp \\
+     simp [cj 2 extreal_not_infty])
+ >> CONJ_TAC
+  (* integrable p
+          (λx'. abs (Normal (diff n t / &FACT n) * Normal (X x' pow n))) *)
+ >- (MP_TAC (Q.SPECL [‘p’, ‘λx'. Normal ((diff : num -> real -> real) n (t : real) / &FACT n) *
+                                 Normal (X x' pow n)’]
+             integrable_abs) \\
+     fs [prob_space_def] \\
+     impl_tac
+      (* integrable p (λx'. Normal (diff n t / &FACT n) * Normal (X x' pow n)) *)
+     >- (MP_TAC (Q.SPECL [‘p’, ‘λx'. Normal (X x' pow n)’,
+                          ‘(diff : num -> real -> real) n (t : real) / &FACT n’]
+                 integrable_cmul) \\
+     simp [] \\
+     impl_tac \\
+     simp [o_DEF]) \\
+     simp [o_DEF])
+ >> CONJ_TAC
+  (* integrable p (λx'. Normal (r / &FACT n) * abs (Normal (X x' pow n))) *)
+    >- (MP_TAC (Q.SPECL [‘p’, ‘λx'. abs (Normal (X x' pow n))’,
+                       ‘r / &FACT n’]
+                integrable_cmul) \\
+        fs [o_DEF, prob_space_def])
+    >> Know ‘(λx'. (X x') pow n) ∈ borel_measurable (measurable_space p)’
+    >- (irule in_borel_measurable_pow \\
+        fs [SIGMA_ALGEBRA_BOREL, prob_space_def] \\
+        qexistsl_tac [‘X’, ‘n’] \\
+        fs [random_variable_def, p_space_def, events_def] \\
+        METIS_TAC [])
+    >> DISCH_TAC
+ >> CONJ_TAC
+  (* real_random_variable
+          (λx'. abs (Normal (diff n t / &FACT n) * Normal (X x' pow n))) p *)
+ >- (Q.ABBREV_TAC ‘c = diff n t / &FACT n’ \\
+     MP_TAC (Q.SPECL [‘p’, ‘λx'. Normal c * Normal (X x' pow n)’]
+             real_random_variable_abs) \\
+     simp [] \\
+     Know ‘real_random_variable (λx. Normal (X x pow n)) p’
+     >- (fs [real_random_variable_def, random_variable_def, p_space_def,
+             events_def, extreal_not_infty, abs_not_infty] \\
+         METIS_TAC [IN_MEASURABLE_BOREL_IMP_BOREL]) \\
+     DISCH_TAC \\
+     MP_TAC (Q.SPECL [‘p’, ‘λx. Normal (X x pow n)’, ‘c’]
+             real_random_variable_cmul) \\
+     simp [])
+  (* real_random_variable
+          (λx'. Normal (r / &FACT n) * abs (Normal (X x' pow n))) p *)
+ >> Know ‘real_random_variable (λx'. Normal (X x' pow n)) p’
+ >- (fs [real_random_variable_def, random_variable_def, p_space_def, events_def] \\
+     METIS_TAC [IN_MEASURABLE_BOREL_IMP_BOREL])
+ >> DISCH_TAC
+ >> Know ‘real_random_variable (λx''. abs (Normal (X x'' pow n))) p’
+ >- (fs [real_random_variable_def, random_variable_def, p_space_def,
+         events_def, extreal_not_infty, abs_not_infty] \\
+     MP_TAC (Q.SPECL [‘measurable_space p’, ‘λx'. Normal (X x' pow n)’]
+             IN_MEASURABLE_BOREL_ABS') \\
+     fs [SIGMA_ALGEBRA_BOREL, prob_space_def, o_DEF])
+ >> MP_TAC (Q.SPECL [‘p’, ‘λx'. abs (Normal (X x')) pow n’,
+                     ‘r / &FACT n’]
+            real_random_variable_cmul)
+ >> simp []
 QED
 
 (*
