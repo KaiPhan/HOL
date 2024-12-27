@@ -780,36 +780,6 @@ Proof
  >> FULL_SIMP_TAC std_ss []
 QED
 
-Theorem expectation_pos:
-    ∀p X. prob_space p ∧
-          real_random_variable X p ∧
-          integrable p X ∧
-          (∀x. x IN p_space p ⇒ 0 ≤ X x) ⇒
-          0 ≤ expectation p X
-Proof
-    rw [expectation_def, prob_space_def, real_random_variable_def, p_space_def]
- >> MATCH_MP_TAC integral_pos
- >> fs [prob_space_def, p_space_def]
-QED
-
-Theorem expectation_pos':
-  ∀p X. prob_space p ∧
-        random_variable X p borel ∧
-        integrable p (Normal o X) ∧
-        (∀x. x IN p_space p ⇒ 0 ≤ (Normal o X) x) ⇒
-        0 ≤ expectation p (Normal o X)
-Proof
-    rw []
- >> MP_TAC (Q.SPECL [‘p’, ‘Normal o X’]
-            expectation_pos)
- >> fs []
- >> Know ‘real_random_variable (Normal ∘ X) p’
- >- (rw [real_random_variable_def] \\
-     FULL_SIMP_TAC std_ss [real_random_variable_def, random_variable_def, p_space_def, events_def] \\
-     METIS_TAC [IN_MEASURABLE_BOREL_IMP_BOREL])
- >> fs []
-QED
-
 Theorem expectation_mono:
     ∀p X Y.
             prob_space p ∧
