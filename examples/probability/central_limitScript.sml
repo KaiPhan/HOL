@@ -1155,23 +1155,32 @@ Proof
   >> cheat
 QED
 
-Theorem expectation_gt_0:
-  ∀p X.
-    prob_space p ∧ (∀x. x ∈ p_space p ⇒ 0 < X x) ⇒
-    0 < expectation p X
+Theorem integral_gt_0:
+    ∀m f. measure_space m ∧ (∀x. x ∈ m_space m ⇒ 0 < f x) ⇒ 0 < ∫ m f
 Proof
-  cheat
+    cheat
+QED
+
+
+Theorem expectation_gt_0:
+    ∀p X.
+          prob_space p ∧ (∀x. x ∈ p_space p ⇒ 0 < X x) ⇒
+          0 < expectation p X
+Proof
+    rw [expectation_def, prob_space_def, m_space_def]
+ >> irule integral_gt_0
+ >> fs [p_space_def]
 QED
 
 Theorem TAYLOR_REMAINDER_EXPECTATION:
-  ∀p diff n X.
-               prob_space p ∧ random_variable X p borel ∧
-               integrable p (Normal o X) ∧
-               integrable p (λx. Normal (X x pow n)) ⇒
-               ∃M (t: real).
-                             abs (Normal (diff n t)) ≤ M ⇒
-                             expectation p (λx. abs (Normal (diff n t / &FACT n) * (Normal ∘ X) x pow n)) ≤
-                             M / Normal (&FACT n) * expectation p (λx. abs ((Normal ∘ X) x) pow n)
+    ∀p diff n X.
+                 prob_space p ∧ random_variable X p borel ∧
+                 integrable p (Normal o X) ∧
+                 integrable p (λx. Normal (X x pow n)) ⇒
+                 ∃M (t: real).
+                               abs (Normal (diff n t)) ≤ M ⇒
+                               expectation p (λx. abs (Normal (diff n t / &FACT n) * (Normal ∘ X) x pow n)) ≤
+                               M / Normal (&FACT n) * expectation p (λx. abs ((Normal ∘ X) x) pow n)
 Proof
     rpt STRIP_TAC
  >> MP_TAC (Q.SPECL [‘diff’, ‘n’, ‘X x’]
