@@ -1172,7 +1172,6 @@ Proof
   >> cheat
 QED
 
-
 Theorem expectation_gt_0:
     ∀p X.
           prob_space p ∧ (∀x. x ∈ p_space p ⇒ 0 < X x) ⇒
@@ -1201,6 +1200,30 @@ Proof
  >> qexistsl [‘M’, ‘t’]
  >> STRIP_TAC
  >> fs [o_DEF]
+ >> Know ‘integrable p (λx'. abs (Normal (X x' pow n)))’
+ >- (MP_TAC (Q.SPECL [‘p’, ‘λx. Normal (X x pow n)’]
+             integrable_abs) \\
+     FULL_SIMP_TAC std_ss [prob_space_def, o_DEF])
+ >> DISCH_TAC
+ >> ‘∀x'. abs (Normal (X x')) pow n = abs (Normal (X x') pow n)’
+    by rw [extreal_abs_def, extreal_pow_def, POW_ABS]
+ >> rw []
+ >> ‘∀x'. Normal (X x') pow n = Normal ((X x') pow n)’ by rw [extreal_pow_def]
+ >> rw []
+ >> Cases_on ‘expectation p (λx'. abs (Normal (X x' pow n))) = 0’
+ >- (rw [] \\
+     Q.ABBREV_TAC ‘c = diff n t / &FACT n’ \\
+     ‘∀x'. abs (Normal c * Normal (X x' pow n)) =
+           abs (Normal c) * abs (Normal (X x' pow n))’ by rw [abs_mul] \\
+     POP_ORW \\
+     ‘abs (Normal c) = Normal (abs c)’ by rw [extreal_abs_def] \\
+     POP_ORW \\
+     ‘expectation p (λx'. Normal (abs c) * abs (Normal (X x' pow n)))  =
+      Normal (abs c) * expectation p (λx'. abs (Normal (X x' pow n)))’
+     by METIS_TAC [expectation_cmul] \\
+     POP_ORW \\
+     Q.PAT_X_ASSUM ‘expectation p (λx'. abs (Normal (X x' pow n))) = 0’ MP_TAC \\
+     rw [])
  >> Know ‘0 ≤ M’
  >- (simp [sup_le] \\
      rw [le_sup] \\
@@ -1216,8 +1239,6 @@ Proof
  >> ‘∀x'. abs (Normal (X x')) pow n = abs (Normal (X x') pow n)’
      by rw [extreal_abs_def, extreal_pow_def, POW_ABS]
  >> rw []
- >> ‘∀x'. Normal (X x') pow n = Normal ((X x') pow n)’ by rw [extreal_pow_def]
- >> rw []
  >> Cases_on ‘∀x'. Normal (X x' pow n) = 0’
  >- (rw [abs_0, expectation_zero])
  >> FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
@@ -1226,23 +1247,18 @@ Proof
      >- (‘M / Normal (&FACT n) = PosInf’ by METIS_TAC [infty_div] \\
          POP_ORW \\
          MATCH_MP_TAC (cj 1 mul_infty) \\
-         ‘0 < abs (Normal (X x' pow n))’ by METIS_TAC [abs_gt_0] \\
-         irule expectation_gt_0 \\
-         BETA_TAC \\
-         CONJ_TAC
-         >- (cheat) \\
-         simp []) \\
+         ‘∀x'. 0 ≤ abs (Normal (X x' pow n))’ by METIS_TAC [abs_pos] \\
+         Know ‘0 ≤ expectation p (λx'. abs (Normal (X x' pow n)))’
+         >- (irule expectation_pos \\
+             simp []) \\
+         DISCH_TAC \\
+         simp [lt_le]) \\
      DISCH_TAC \\
      rw [])
  >> ‘∃r. M = Normal r’ by METIS_TAC [extreal_cases]
  >> FULL_SIMP_TAC std_ss []
  >> ‘Normal r / Normal (&FACT n) = Normal (r / &FACT n)’ by METIS_TAC [extreal_div_eq]
  >> POP_ORW
- >> Know ‘integrable p (λx'. abs (Normal (X x' pow n)))’
- >- (MP_TAC (Q.SPECL [‘p’, ‘λx. Normal (X x pow n)’]
-             integrable_abs) \\
-     FULL_SIMP_TAC std_ss [prob_space_def, o_DEF])
- >> DISCH_TAC
  >> Know ‘expectation p (λx'. Normal (r / &FACT n) * abs (Normal (X x' pow n))) =
           Normal (r / &FACT n) * expectation p (λx'. abs (Normal (X x' pow n)))’
  >- (MP_TAC (Q.SPECL [‘p’, ‘λx'. abs (Normal (X x' pow n))’, ‘r / &FACT n’]
