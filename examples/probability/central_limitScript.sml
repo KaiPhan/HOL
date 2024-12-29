@@ -867,6 +867,16 @@ Proof
  >> fs []
 QED
 
+Theorem expectation_mono_alt:
+    ∀p f g.
+            prob_space p ∧ integrable p f ∧ integrable p g ∧
+            (∀x. x ∈ p_space p ⇒ f x ≤ g x) ⇒
+            expectation p f ≤ expectation p g
+Proof
+  rw [prob_space_def, p_space_def, expectation_def]
+  >> MATCH_MP_TAC integral_mono >> art []
+QED
+
 (* ------------------------------------------------------------------------- *)
 (*  Taylor Theorem                                                           *)
 (* ------------------------------------------------------------------------- *)
@@ -1158,7 +1168,8 @@ QED
 Theorem integral_gt_0:
     ∀m f. measure_space m ∧ (∀x. x ∈ m_space m ⇒ 0 < f x) ⇒ 0 < ∫ m f
 Proof
-    cheat
+  RW_TAC std_ss []
+  >> cheat
 QED
 
 
