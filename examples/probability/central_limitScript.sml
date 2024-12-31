@@ -1165,23 +1165,6 @@ Proof
   >> cheat
 QED
 
-Theorem integral_gt_0:
-    ∀m f. measure_space m ∧ (∀x. x ∈ m_space m ⇒ 0 < f x) ⇒ 0 < ∫ m f
-Proof
-  RW_TAC std_ss []
-  >> cheat
-QED
-
-Theorem expectation_gt_0:
-    ∀p X.
-          prob_space p ∧ (∀x. x ∈ p_space p ⇒ 0 < X x) ⇒
-          0 < expectation p X
-Proof
-    rw [expectation_def, prob_space_def, m_space_def]
- >> irule integral_gt_0
- >> fs [p_space_def]
-QED
-
 Theorem TAYLOR_REMAINDER_EXPECTATION:
     ∀p diff n X.
                  prob_space p ∧ random_variable X p borel ∧
