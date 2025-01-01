@@ -734,6 +734,29 @@ Proof
  >> simp []
 QED
 
+
+Theorem extreal_to_real_rv:
+  ∀p X. prob_space p ∧ random_variable X p borel ⇒
+        real_random_variable (Normal o X) p
+Proof
+  rw [real_random_variable_def, random_variable_def]
+  >> irule IN_MEASURABLE_BOREL_IMP_BOREL'
+  >> FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA_BOREL, prob_space_def, p_space_def, events_def, measure_space_def]
+QED
+
+Theorem real_to_extreal_rv:
+  ∀p X. prob_space p ∧
+        real_random_variable (Normal o X) p ⇒
+        random_variable X p borel
+Proof
+  rw [real_random_variable_def, random_variable_def]
+  >> MP_TAC (Q.SPECL [‘(p_space p,events p)’, ‘Normal o X’]
+              in_borel_measurable_from_Borel)
+  >> FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA_BOREL, prob_space_def, p_space_def, events_def, measure_space_def]
+  >> rw [o_DEF]
+  >> METIS_TAC []
+QED
+
 (* ------------------------------------------------------------------------- *)
 (*  Expectation                                                              *)
 (* ------------------------------------------------------------------------- *)
@@ -1342,18 +1365,38 @@ QED
 
 Theorem taylor_thm[local]:
     ∀(diff :num -> real -> real) x n.
-                   sup {abs (Normal (diff n x)) | x | T} ≠ NegInf ∧
-                   sup {abs (Normal (diff n x)) | x | T} ≠ PosInf
+                   sup {abs (Normal (diff n x)) | x | T} ≠ NegInf
 Proof
-  cheat
+  rw []
+  >> ‘∀x. Normal (diff n x) ≠ NegInf ∧
+          Normal (diff n x) ≠ PosInf’ by rw [extreal_not_infty]
+  >> ‘∀x. abs (Normal (diff n x)) ≠ NegInf ∧
+          abs (Normal (diff n x)) ≠ PosInf’ by rw [abs_not_infty]
+  >> ‘∀x. 0 ≤ abs (Normal (diff n x))’ by METIS_TAC [abs_pos]
+  >> MP_TAC (Q.SPECL [‘{abs (Normal ((diff :num -> real -> real) n x)) | x | T}’, ‘0’]
+              le_sup_imp2)
+  >> simp []
+  >> METIS_TAC [extreal_0_simps, lt_trans]
 QED
 
 Definition third_moment_def:
   third_moment p X = central_moment p X 3
 End
+(*
+Theorem taylor_clt_tactic1[local]:
+    ∀p X Y (diff :num -> real -> real) (M:extreal).
+            prob_space p ∧
+            random_variable X p borel ∧
+            random_variable Y p borel ∧
+            indep_vars p X Y borel borel ⇒
+            indep_vars p X (λx. Normal o (Y x)) borel borel
+
+Proof
+QED
+∀x. indep_vars p (Normal (diff 1 (Y x))) (Normal (X x)) borel borel
 
 Theorem TAYLOR_CLT_EXPECTATION[local]:
-    ∀p X Y (diff :num -> real -> real) (M:extreal) f.
+    ∀p X Y (diff :num -> real -> real) (M:extreal).
             prob_space p ∧
             random_variable X p borel ∧
             random_variable Y p borel ∧
@@ -1369,7 +1412,10 @@ Theorem TAYLOR_CLT_EXPECTATION[local]:
             M / 6 * expectation p (abs o (Normal ∘ (λx. (X x)³)))
 Proof
     rpt STRIP_TAC
- >> ‘M ≠ NegInf ∧ M ≠ PosInf’ by simp [taylor_thm]
+    >> ‘M ≠ NegInf’ by simp [taylor_thm]
+    >> Cases_on ‘M = PosInf’
+    >- (rw[]
+        )
  >> ‘∃r. M = Normal r’ by METIS_TAC [extreal_cases]
  >> simp [o_DEF]
  >> ‘6 = Normal 6’ by rw [extreal_of_num_def]
@@ -1418,7 +1464,7 @@ Proof
  >- (cheat)
  >> cheat
 QED
-
+*)
 
 (* ------------------------------------------------------------------------- *)
 (*  Normal density                                                           *)
