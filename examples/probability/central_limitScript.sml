@@ -734,7 +734,7 @@ Proof
  >> simp []
 QED
 
-Theorem extreal_to_real_rv:
+Theorem real_to_extreal_rv:
     ∀p X. prob_space p ∧ random_variable X p borel ⇒
           real_random_variable (Normal o X) p
 Proof
@@ -743,7 +743,7 @@ Proof
  >> FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA_BOREL, prob_space_def, p_space_def, events_def, measure_space_def]
 QED
 
-Theorem real_to_extreal_rv:
+Theorem extreal_to_real_rv:
     ∀p X. prob_space p ∧
         real_random_variable (Normal o X) p ⇒
         random_variable X p borel
@@ -876,8 +876,8 @@ Proof
             expectation_mono)
  >> fs []
  >> STRIP_TAC
- >> ‘real_random_variable (Normal ∘ X) p’ by METIS_TAC [extreal_to_real_rv]
- >> ‘real_random_variable (Normal ∘ Y) p’ by METIS_TAC [extreal_to_real_rv]
+ >> ‘real_random_variable (Normal ∘ X) p’ by METIS_TAC [real_to_extreal_rv]
+ >> ‘real_random_variable (Normal ∘ Y) p’ by METIS_TAC [real_to_extreal_rv]
  >> fs []
 QED
 
@@ -1005,7 +1005,6 @@ Proof
     >> ‘abs (x pow n) = (abs x) pow n’ by METIS_TAC [POW_ABS]
     >> FULL_SIMP_TAC std_ss []
 QED
-
 
 Theorem TAYLOR_THEOREM:
     ∀f diff a x n.
@@ -1381,33 +1380,23 @@ Theorem taylor_clt_tactic1[local]:
             random_variable Y p borel ∧
             bounded (IMAGE f 𝕌(:real)) ∧
             f continuous_on 𝕌(:real) ∧
-            indep_vars p X Y borel borel ⇒
-            indep_vars p (λx. (diff n (Y x))) X borel borel
+            diff 0 = f ∧
+            indep_vars p Y X borel borel ⇒
+            indep_vars p (λx. (diff n (Y x))) (λx. X x pow n) borel borel
 Proof
-    cheat
-QED
-
-Theorem TAYLOR_CLT_EXP2[local]:
-    ∀p X Y (diff :num -> real -> real) f.
-            prob_space p ∧
-            random_variable X p borel ∧
-            random_variable Y p borel ∧
-            integrable p (Normal ∘ X) ∧
-            integrable p (λx. Normal (X x pow 3)) ∧
-            third_moment p (Normal ∘ X) < +∞ ∧
-            bounded (IMAGE f 𝕌(:real)) ∧
-            f continuous_on 𝕌(:real) ⇒
-            ∃t. Y x < t ∧ t < Y x + X x ∧
-            expectation p (Normal ∘ f ∘ (λx. Y x + X x)) =
-            expectation p (Normal ∘ f ∘ (λx. Y x)) +
-            expectation p (λx. Normal (diff 1 (Y x))) *
-            expectation p (Normal ∘ f ∘ (λx. X x)) +
-            1 / 2 * expectation p (λx. Normal (diff 2 (Y x))) *
-            expectation p (Normal ∘ f ∘ (λx. X x powr 2)) +
-            expectation p
-                          (λx. abs (Normal (diff 3 t / 6) * (Normal ∘ X) x pow 3))
-Proof
-  cheat
+    rw []
+ >> (MP_TAC o (Q.SPECL [‘p’, ‘Y’, ‘X’, ‘borel’, ‘borel’,
+                        ‘(diff :num -> real -> real) (n :num) ’,
+                        ‘λx. x pow n’]) o
+              (INST_TYPE [beta |-> ``:real``])) indep_rv_cong
+ >> simp [o_DEF]
+ >> Know ‘diff n ∈ borel_measurable borel’
+ >- (cheat)
+ >> DISCH_TAC
+ >> Know ‘(λx. x pow n) ∈ borel_measurable borel’
+ >- (cheat)
+ >> DISCH_TAC
+ >> FULL_SIMP_TAC std_ss []
 QED
 
 Theorem TAYLOR_CLT_EXPECTATION[local]:
@@ -1416,10 +1405,14 @@ Theorem TAYLOR_CLT_EXPECTATION[local]:
             random_variable X p borel ∧
             random_variable Y p borel ∧
             integrable p (Normal ∘ X) ∧
+            integrable p (Normal ∘ Y) ∧
             integrable p (λx. Normal (X x pow 3)) ∧
             third_moment p (Normal ∘ X) < +∞ ∧
+            diff 0 = f ∧
             bounded (IMAGE f 𝕌(:real)) ∧
-            f continuous_on 𝕌(:real) ⇒
+            f continuous_on 𝕌(:real) ∧
+            (∀m t x. m < 3 ∧ Y x ≤ t ∧ t ≤ Y x + abs (X x) ⇒ (diff m diffl diff (SUC m) t) t) ∧
+            (∃z. ∀x. abs (diff 3 x) ≤ z) ⇒
             abs (expectation p (Normal ∘ f ∘ (λx. Y x + X x)) −
             (expectation p (Normal ∘ f ∘ (λx. Y x)) +
             expectation p (λx. Normal (diff 1 (Y x))) *
@@ -1429,11 +1422,59 @@ Theorem TAYLOR_CLT_EXPECTATION[local]:
             sup {abs (Normal (diff 3 x)) | x | T} / 6 * expectation p (abs ∘ Normal ∘ (λx. (X x)³))
 Proof
     rpt STRIP_TAC
- >> MP_TAC (Q.SPECL [‘diff’, ‘f’, ‘Y x’, ‘X x’] TAYLOR_CLT_LEMMA)
- >> rw []
+ >> Cases_on ‘∀x. X x = 0’
+ >- (simp [o_DEF, normal_0, abs_0, zero_rpow, expectation_zero] \\
+     ‘expectation p (λx. Normal (f 0)) = 0’ by cheat \\
+     POP_ORW \\
+     ‘expectation p (λx. Normal (f (0 powr 2))) = 0’ by cheat \\
+     POP_ORW \\
+     simp [mul_rzero] \\
+     ‘∀x. Normal (f (Y x)) ≠ NegInf ∧ Normal (f (Y x)) ≠ PosInf’ by METIS_TAC [extreal_not_infty] \\
+     Know ‘expectation p (λx. Normal (f (Y x))) ≠ PosInf ∧
+           expectation p (λx. Normal (f (Y x))) ≠ NegInf’
+     >- (irule expectation_finite \\
+         simp [] \\
+        (* integrable p (λx. Normal (f (Y x)))*)
+         cheat) \\
+     rw [sub_refl])
+ >> FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
+ >> MP_TAC (Q.SPECL [‘diff’, ‘f’, ‘Y x’, ‘abs (X x)’] TAYLOR_CLT_LEMMA)
+ >> simp []
+ >> STRIP_TAC
  >> Q.ABBREV_TAC ‘M = sup {abs (Normal (diff 3 x)) | x | T}’
  >> FULL_SIMP_TAC std_ss []
-    >> cheat
+ >> Know ‘expectation p (λx. Normal (diff 1 (Y x))) *
+          expectation p (λx. Normal (f (X x))) =
+          expectation p (λx. Normal (diff 1 (Y x)) * Normal (f (X x)))’
+ >- ((MP_TAC o (Q.SPECL [‘p’, ‘λx. Normal ((diff :num -> real -> real) 1 (Y x))’,
+                         ‘λx. Normal ((f :real -> real) (X x))’]) o
+               (INST_TYPE [beta |-> ``:real``])) (GSYM indep_vars_expectation) \\
+      simp [] \\
+      Know ‘real_random_variable (λx. Normal (diff 1 (Y x))) p’
+     >- (cheat) \\
+      DISCH_TAC \\
+      Know ‘real_random_variable (λx. Normal (f (X x))) p’
+     >- (Know ‘random_variable (f o X) p borel’
+         >- (irule random_variable_comp \\
+             simp [in_borel_measurable_continuous_on]) \\
+             simp [o_DEF] \\
+         DISCH_TAC \\
+         METIS_TAC [o_DEF, real_to_extreal_rv]) \\
+      DISCH_TAC \\
+      Know ‘indep_vars p (λx. Normal (diff 1 (Y x))) (λx. Normal (f (X x)))
+            Borel Borel’
+      >- (cheat) \\
+      DISCH_TAC \\
+      Know ‘integrable p (λx. Normal (diff 1 (Y x)))’
+      >- (cheat) \\
+      DISCH_TAC \\
+      Know ‘integrable p (λx. Normal (f (X x)))’
+      >- (cheat) \\
+      DISCH_TAC \\
+      FULL_SIMP_TAC std_ss [])
+ >> DISCH_TAC
+ >> POP_ORW
+ >> cheat
 QED
 
 
