@@ -14,7 +14,7 @@ open util_probTheory extrealTheory sigma_algebraTheory measureTheory
      real_borelTheory borelTheory lebesgueTheory martingaleTheory
      probabilityTheory derivativeTheory extreal_baseTheory;
 
-open distributionTheory;
+open distributionTheory realaxTheory;
 
 open limTheory;
 
@@ -399,7 +399,7 @@ Proof
     rpt STRIP_TAC
  >> FULL_SIMP_TAC std_ss [BigO_def]
  >> qexistsl_tac [‘c * c'’, ‘MAX n0 n0'’]
- >> rw [REAL_MAX_LE, REAL_LT_MUL]
+ >> rw [REAL_MAX_LE, REAL_LT_MUL']
  >> Q.PAT_X_ASSUM ‘∀n. n0 ≤ n ⇒ abs (f1 n) ≤ c * abs (g1 n)’
     (MP_TAC o Q.SPEC ‘n’)
  >> rw []
@@ -408,7 +408,8 @@ Proof
  >> rw []
  >> Know ‘abs (f1 n) * abs (f2 n) ≤ c * abs (g1 n) * (c' * abs (g2 n))’
  >- (MATCH_MP_TAC REAL_LE_MUL2 \\
-     simp [])
+     fs [] \\
+     rw [])
  >> DISCH_TAC
  >> ‘abs (f1 n) * abs (f2 n) = abs (f1 n * f2 n)’ by rw [GSYM ABS_MUL]
  >> ‘c * abs (g1 n) * (c' * abs (g2 n)) = c * c' * abs (g1 n * g2 n)’
@@ -760,7 +761,7 @@ QED
 (*  Expectation                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem expectation_linear:
+Theorem expectation_add:
   ∀p X Y.
           prob_space p ∧
           real_random_variable X p ∧
@@ -774,7 +775,7 @@ Proof
  >> simp []
 QED
 
-Theorem expectation_linear':
+Theorem expectation_add':
   ∀p X Y.
           prob_space p ∧
           random_variable X p borel ∧
@@ -786,7 +787,7 @@ Theorem expectation_linear':
 Proof
     rw []
  >> MP_TAC (Q.SPECL [‘p’, ‘Normal o X’, ‘Normal o Y’]
-            expectation_linear)
+            expectation_add)
  >> simp []
  >> STRIP_TAC
  >> Know ‘expectation p (λx. Normal (X x) + Normal (Y x)) =
@@ -843,7 +844,7 @@ Proof
  >> DISCH_TAC
  >> Know ‘expectation p (λx. Z x + X x) =
           expectation p Z + expectation p X’
- >- (MATCH_MP_TAC expectation_linear \\
+ >- (MATCH_MP_TAC expectation_add \\
      simp [])
  >> rpt STRIP_TAC
  >> ‘expectation p (λx. Y x) =
@@ -1157,25 +1158,24 @@ Proof
 QED
 
 Theorem in_borel_measurable_pow:
-    !a f g n. sigma_algebra a /\
+    !a n f g. sigma_algebra a /\
               f IN measurable a borel /\
               (!x. x IN space a ==> (g x = (f x) pow n)) ==>
                    g IN measurable a borel
 Proof
-    rpt STRIP_TAC
+    STRIP_TAC
  >> Induct_on ‘n’
  >- (FULL_SIMP_TAC std_ss [pow0] \\
      METIS_TAC [in_borel_measurable_const])
- >> ‘!x. x IN space a ==> f x pow SUC n = f x pow (n + 1)’ by rw [ADD1]
- >> ‘!x. x IN space a ==> f x pow (n + 1) = f x pow n * f x pow 1’ by rw [POW_ADD]
- >> FULL_SIMP_TAC std_ss []
- >> fs [pow_1]
- >> STRIP_TAC
+ >> rpt STRIP_TAC
+ >> fs [real_pow]
  >> irule in_borel_measurable_mul
  >> simp []
  >> qexistsl [‘f’, ‘λx. f x pow n’]
  >> simp []
- >> cheat
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> qexists ‘f’
+ >> simp []
 QED
 
 Theorem TAYLOR_REMAINDER_EXPECTATION:
@@ -1373,6 +1373,7 @@ Definition third_moment_def:
   third_moment p X = central_moment p X 3
 End
 
+
 Theorem taylor_clt_tactic1[local]:
     ∀p X Y (diff :num -> real -> real) n f.
             prob_space p ∧
@@ -1385,19 +1386,28 @@ Theorem taylor_clt_tactic1[local]:
             indep_vars p (λx. (diff n (Y x))) (λx. X x pow n) borel borel
 Proof
     rw []
+ >> cheat
+QED
+
+(*
  >> (MP_TAC o (Q.SPECL [‘p’, ‘Y’, ‘X’, ‘borel’, ‘borel’,
-                        ‘(diff :num -> real -> real) (n :num) ’,
-                        ‘λx. x pow n’]) o
+                        ‘λ(x :α). ((diff :num -> real -> real) n (Y x))’,
+                        ‘λx. X x pow n’]) o
               (INST_TYPE [beta |-> ``:real``])) indep_rv_cong
  >> simp [o_DEF]
  >> Know ‘diff n ∈ borel_measurable borel’
  >- (cheat)
  >> DISCH_TAC
  >> Know ‘(λx. x pow n) ∈ borel_measurable borel’
- >- (cheat)
+    >- (irule in_borel_measurable_pow \\
+        simp [sigma_algebra_borel] \\
+        qexistsl_tac [‘λx. f x’, ‘n’] \\
+        simp [in_borel_measurable_continuous_on]
+    cheat)
  >> DISCH_TAC
  >> FULL_SIMP_TAC std_ss []
 QED
+*)
 
 Theorem TAYLOR_CLT_EXPECTATION[local]:
     ∀p X Y (diff :num -> real -> real) f.
@@ -1416,25 +1426,36 @@ Theorem TAYLOR_CLT_EXPECTATION[local]:
             abs (expectation p (Normal ∘ f ∘ (λx. Y x + X x)) −
             (expectation p (Normal ∘ f ∘ (λx. Y x)) +
             expectation p (λx. Normal (diff 1 (Y x))) *
-            expectation p (Normal ∘ f ∘ (λx. X x)) +
+            expectation p (Normal ∘ (λx. X x)) +
             1 / 2 * expectation p (λx. Normal (diff 2 (Y x))) *
-            expectation p (Normal ∘ f ∘ (λx. X x powr 2)))) ≤
+            expectation p (Normal ∘ (λx. X x powr 2)))) ≤
             sup {abs (Normal (diff 3 x)) | x | T} / 6 * expectation p (abs ∘ Normal ∘ (λx. (X x)³))
 Proof
     rpt STRIP_TAC
  >> Cases_on ‘∀x. X x = 0’
  >- (simp [o_DEF, normal_0, abs_0, zero_rpow, expectation_zero] \\
-     ‘expectation p (λx. Normal (f 0)) = 0’ by cheat \\
-     POP_ORW \\
-     ‘expectation p (λx. Normal (f (0 powr 2))) = 0’ by cheat \\
+     ‘expectation p (λx. Normal ((0 powr 2))) = 0’ by cheat \\
+       (* fs [zero_rpow, normal_0, expectation_zero] \\ *)
      POP_ORW \\
      simp [mul_rzero] \\
+
      ‘∀x. Normal (f (Y x)) ≠ NegInf ∧ Normal (f (Y x)) ≠ PosInf’ by METIS_TAC [extreal_not_infty] \\
+
      Know ‘expectation p (λx. Normal (f (Y x))) ≠ PosInf ∧
            expectation p (λx. Normal (f (Y x))) ≠ NegInf’
      >- (irule expectation_finite \\
-         simp [] \\
-        (* integrable p (λx. Normal (f (Y x)))*)
+         fs [bounded_def] \\
+         irule integrable_bounded \\
+         fs [prob_space_def, random_variable_def] \\
+         CONJ_ASM2_TAC
+         >- ((MP_TAC o (Q.SPECL [‘measurable_space p’, ‘λx. Normal (f ((Y :α -> real) x))’]) o
+                       (INST_TYPE [beta |-> ``:real``])) IN_MEASURABLE_BOREL_NORMAL_REAL \\
+          simp [] \\
+          cheat) \\
+      (*   Q.PAT_X_ASSUM ‘∀x. (∃x'. x = f x') ⇒ abs x ≤ a’ (MP_TAC o Q.SPEC ‘Normal (f (Y x))’)
+         qexists ‘λx. a’ *)
+
+              (* integrable p (λx. Normal (f (Y x)))*)
          cheat) \\
      rw [sub_refl])
  >> FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
