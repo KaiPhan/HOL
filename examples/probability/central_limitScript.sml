@@ -626,9 +626,14 @@ Proof
               CONJ_ASM2_TAC
               (*  ∃z. ∀x. x ∈ IMAGE f' (count1 n') ⇒ x ≤ z  *)
               >- (Q.EXISTS_TAC ‘sup (IMAGE f' (count1 n'))’ \\
-                  FULL_SIMP_TAC std_ss [] \\
                   (* ∀x. x ∈ IMAGE f' (count1 n') ⇒ x ≤ sup (IMAGE f' (count1 n')) *)
-                  cheat) \\
+                  (******  le_sup_imp' *******)
+
+                  GEN_TAC \\
+                  MP_TAC (Q.SPEC ‘IMAGE f' (count1 n')’ REAL_SUP_UBOUND_LE') \\
+                  rw [] \\
+
+                    cheat) \\
               simp []) \\
           DISCH_TAC \\
           Cases_on ‘abs (g i x) = 0’
@@ -794,6 +799,48 @@ Proof
           expectation p (Normal ∘ (λx. X x + Y x))’
  >- (MATCH_MP_TAC expectation_cong \\
      rw[extreal_add_eq])
+ >> DISCH_TAC
+ >> FULL_SIMP_TAC std_ss [integrable_def]
+ >> ‘real_random_variable (Normal ∘ X) p’
+     by rw [real_random_variable_def, random_variable_def, p_space_def, events_def]
+ >> ‘real_random_variable (Normal ∘ Y) p’
+     by rw [real_random_variable_def, random_variable_def, p_space_def, events_def]
+ >> FULL_SIMP_TAC std_ss []
+QED
+
+Theorem expectation_sub:
+  ∀p X Y.
+          prob_space p ∧
+          real_random_variable X p ∧
+          integrable p X ∧
+          real_random_variable Y p ∧
+          integrable p Y ⇒
+          expectation p (λx. X x - Y x) = expectation p X - expectation p Y
+Proof
+    rw [expectation_def, prob_space_def, real_random_variable_def, p_space_def]
+ >> MATCH_MP_TAC integral_sub
+ >> simp []
+QED
+
+Theorem expectation_sub':
+  ∀p X Y.
+          prob_space p ∧
+          random_variable X p borel ∧
+          integrable p (Normal o X) ∧
+          random_variable Y p borel ∧
+          integrable p (Normal o Y) ⇒
+          expectation p (Normal o (λx. X x - Y x)) =
+          expectation p (Normal o X) - expectation p (Normal o Y)
+Proof
+    rw []
+ >> MP_TAC (Q.SPECL [‘p’, ‘Normal o X’, ‘Normal o Y’]
+            expectation_sub)
+ >> simp []
+ >> STRIP_TAC
+ >> Know ‘expectation p (λx. Normal (X x) - Normal (Y x)) =
+          expectation p (Normal ∘ (λx. X x - Y x))’
+ >- (MATCH_MP_TAC expectation_cong \\
+     rw[extreal_sub_eq])
  >> DISCH_TAC
  >> FULL_SIMP_TAC std_ss [integrable_def]
  >> ‘real_random_variable (Normal ∘ X) p’
@@ -1612,7 +1659,106 @@ Proof
   cheat
 QED
 
-(* Linderberg's approach, waiting for sum of normal distributed rv theorem *)
+Theorem clt_tactic1:
+  ∀p X Y N s b. prob_space p ∧
+                (∀i. real_random_variable (X i) p) ∧
+                (∀i j. indep_vars p (X i) (X j) Borel Borel) ∧
+                (∀i j. indep_vars p (Y i) (Y j) Borel Borel) ∧
+                (∀i. expectation p (X i) = 0) ∧
+                (∀i. central_moment p (X i) 2 < PosInf) ∧
+                (∀i. integrable p (X i)) ∧
+                (∀n. s n = sqrt (second_moments p X n)) ⇒
+                ∀i. real_random_variable (((λn x. ∑ (λi. X i x) (count1 n) / s n)) i) p
+Proof
+  rpt STRIP_TAC
+  >> Q.ABBREV_TAC ‘C = sqrt (second_moments p X i)’
+  >> Cases_on ‘C = 0’
+  >- (rw[Abbr ‘C’] \\
+      cheat)
+  >> Know ‘0 ≤ C’
+  >- (Q.UNABBREV_TAC ‘C’ \\
+      MATCH_MP_TAC sqrt_pos_le \\
+      rw[second_moments_def] \\
+      (* 0 < ∑ (λi. central_moment p (X i) 2) (count1 i) *)
+      Q.ABBREV_TAC ‘G = λi. central_moment p (X i) 2’ \\
+      MATCH_MP_TAC (INST_TYPE [alpha |-> “:num”] EXTREAL_SUM_IMAGE_POS) \\
+      simp[] \\
+      (* ∀x. x < SUC i ⇒ 0 < G x *)
+      rw[Abbr ‘G’, central_moment_def]\\
+      ‘moment p (X x) 0 2 = second_moment p (X x) 0’ by EVAL_TAC \\
+      simp[] \\
+      MP_TAC (Q.SPECL [‘p’, ‘X (x:num)’, ‘0’]
+              second_moment_pos) \\
+      simp[] \\
+      DISCH_TAC)
+  >> DISCH_TAC
+  >> ‘0 < C’ by rw[lt_le]
+  >> ‘inv(C) ≠ NegInf ∧ inv(C) ≠ PosInf’ by METIS_TAC[inv_not_infty]
+  >> ‘∃r. Normal r = inv(C)’ by METIS_TAC[extreal_cases]
+  >> Q.ABBREV_TAC ‘D = λx. ∑ (λi. X i x) (count1 i)’
+  >> ‘∀x. D x = ∑ (λi. X i x) (count1 i)’ by rw[Abbr ‘D’]
+  >> Know ‘∀x. D x ≠ NegInf’
+  >- (rw[Abbr ‘D’] \\
+      MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_NEGINF \\
+      CONJ_TAC >- REWRITE_TAC [FINITE_COUNT] \\
+      Q.X_GEN_TAC ‘x'’ \\
+      FULL_SIMP_TAC std_ss [real_random_variable_def]\\
+      Q.PAT_X_ASSUM ‘ ∀i'.
+                           random_variable (X i') p Borel ∧
+                           ∀x. x ∈ p_space p ⇒ X i' x ≠ −∞ ∧ X i' x ≠ +∞’
+      (MP_TAC o Q.SPEC ‘x'’) \\
+       STRIP_TAC \\
+       POP_ASSUM (MP_TAC o Q.SPEC ‘x’) \\
+       STRIP_TAC \\
+       cheat)
+  >> DISCH_TAC
+  >> Know ‘∀x. D x ≠ PosInf’
+  >- (rw[Abbr ‘D’] \\
+      MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_POSINF \\
+      cheat)
+  >> DISCH_TAC
+  >> ‘∀x. D x / C = inv(C) * D x’ by METIS_TAC[div_eq_mul_linv]
+  >> ‘∀x. D x / C = Normal r * D x’ by METIS_TAC[div_eq_mul_linv]
+  >> rw[Abbr ‘D’]
+  (*   ASM_REWRITE_TAC [] *)
+  >> FULL_SIMP_TAC std_ss []
+  >> ‘∀x. real_random_variable (λx. Normal r * ∑ (λi. X i x) (count1 i)) p’
+      by rw [real_random_variable_cmul, real_random_variable_sum]
+  >> Know ‘∀x. x IN p_space p ==> inv(C) * ∑ (λi. X i x) (count1 i) = Normal r * ∑ (λi. X i x) (count1 i)’
+  >- (X_GEN_TAC “x” \\
+      DISCH_TAC \\
+      METIS_TAC[])
+  >> DISCH_TAC
+  >> MP_TAC (Q.SPECL [‘p’, ‘λx. inv(C) * ∑ (λi. X i x) (count1 i)’, ‘λx. Normal r * ∑ (λi. X i x) (count1 i)’]
+             real_random_variable_cong)
+  >> impl_tac
+  >> METIS_TAC[]
+  >> METIS_TAC[]
+QED
+
+Theorem clt_tactic2:
+  ∀p X Y.
+          prob_space p ∧ (∀n. real_random_variable (X n) p) ∧
+          real_random_variable Y p ∧
+          ∀f (diff :num -> real -> real).
+              diff 0 = f ∧
+              (∀(i :num). i IN {0; 1; 2; 3} ⇒ bounded (IMAGE (diff i) 𝕌(:real))) ∧
+              (∀(i :num). i IN {0; 1; 2; 3} ⇒ (diff i) continuous_on 𝕌(:real)) ⇒
+              ((λn. expectation p (Normal ∘ f ∘ real ∘ X n)) ⟶
+                    expectation p (Normal ∘ f ∘ real ∘ Y)) sequentially
+Proof
+  cheat
+QED
+
+  (*
+Theorem lim_null:
+    ∀f l x.
+           (∃N. ∀n. N ≤ n ⇒ f n ≠ +∞ ∧ f n ≠ −∞) ∧ l ≠ +∞ ∧ l ≠ −∞ ⇒
+           (f → l)  ⇔ ((λx. (real o f) x − real o l) → 0)
+Proof
+QED
+*)
+
 Theorem central_limit:
   ∀p X Y N s b. prob_space p ∧
                 normal_rv N p 0 1 ∧
@@ -1632,206 +1778,34 @@ Theorem central_limit:
 Proof
      rpt STRIP_TAC
   >> Q.ABBREV_TAC ‘R = λn x. ∑ (λi. X i x) (count1 n) / s n’
-  >> fs[normal_rv_def]
   >> Know ‘∀i. real_random_variable (R i) p’
-     >- (rw[Abbr ‘R’]
-     >> Q.ABBREV_TAC ‘C = sqrt (second_moments p X i)’
-     >> Cases_on ‘C = 0’
-     >- (rw[Abbr ‘C’] \\
-         cheat)
-     >> Know ‘0 ≤ C’
-        >- (Q.UNABBREV_TAC ‘C’ \\
-            MATCH_MP_TAC sqrt_pos_le \\
-            rw[second_moments_def] \\
-            (* 0 < ∑ (λi. central_moment p (X i) 2) (count1 i) *)
-            Q.ABBREV_TAC ‘G = λi. central_moment p (X i) 2’ \\
-            MATCH_MP_TAC (INST_TYPE [alpha |-> “:num”] EXTREAL_SUM_IMAGE_POS) \\
-            simp[] \\
-            (* ∀x. x < SUC i ⇒ 0 < G x *)
-            rw[Abbr ‘G’, central_moment_def]\\
-            ‘moment p (X x) 0 2 = second_moment p (X x) 0’ by EVAL_TAC \\
-            simp[] \\
-            MP_TAC (Q.SPECL [‘p’, ‘X (x:num)’, ‘0’]
-                    second_moment_pos) \\
-            simp[] \\
-            DISCH_TAC)
-     >> DISCH_TAC
-     >> ‘0 < C’ by rw[lt_le]
-     >> ‘inv(C) ≠ NegInf ∧ inv(C) ≠ PosInf’ by METIS_TAC[inv_not_infty]
-     >> ‘∃r. Normal r = inv(C)’ by METIS_TAC[extreal_cases]
-     >> Q.ABBREV_TAC ‘D = λx. ∑ (λi. X i x) (count1 i)’
-     >> ‘∀x. D x = ∑ (λi. X i x) (count1 i)’ by rw[Abbr ‘D’]
-     >> Know ‘∀x. D x ≠ NegInf’
-        >- (rw[Abbr ‘D’] \\
-            MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_NEGINF \\
-            CONJ_TAC >- REWRITE_TAC [FINITE_COUNT] \\
-            Q.X_GEN_TAC ‘x'’ \\
-            FULL_SIMP_TAC std_ss [real_random_variable_def]\\
-            Q.PAT_X_ASSUM ‘ ∀i'.
-                                 random_variable (X i') p Borel ∧
-                                 ∀x. x ∈ p_space p ⇒ X i' x ≠ −∞ ∧ X i' x ≠ +∞’
-            (MP_TAC o Q.SPEC ‘x'’) \\
-             STRIP_TAC \\
-             POP_ASSUM (MP_TAC o Q.SPEC ‘x’) \\
-             STRIP_TAC \\
-             cheat)
-     >> DISCH_TAC
-     >> Know ‘∀x. D x ≠ PosInf’
-        >- (rw[Abbr ‘D’] \\
-            MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_POSINF \\
-            cheat)
-     >> DISCH_TAC
-     >> ‘∀x. D x / C = inv(C) * D x’ by METIS_TAC[div_eq_mul_linv]
-     >> ‘∀x. D x / C = Normal r * D x’ by METIS_TAC[div_eq_mul_linv]
-     >> rw[Abbr ‘D’]
-     (*   ASM_REWRITE_TAC [] *)
-     >> FULL_SIMP_TAC std_ss []
-     >> ‘∀x. real_random_variable (λx. Normal r * ∑ (λi. X i x) (count1 i)) p’ by
-         rw [real_random_variable_cmul, real_random_variable_sum]
-     >> Know ‘∀x. x IN p_space p ==> inv(C) * ∑ (λi. X i x) (count1 i) = Normal r * ∑ (λi. X i x) (count1 i)’
-        >- (X_GEN_TAC “x” \\
-            DISCH_TAC \\
-            METIS_TAC[])
-     >> DISCH_TAC
-     >> MP_TAC (Q.SPECL [‘p’, ‘λx. inv(C) * ∑ (λi. X i x) (count1 i)’, ‘λx. Normal r * ∑ (λi. X i x) (count1 i)’]
-                real_random_variable_cong)
-     >> impl_tac
-     >> METIS_TAC[]
-     >> METIS_TAC[])
+  >- (rw [Abbr ‘R’] \\
+      METIS_TAC [clt_tactic1])
   >> DISCH_TAC
-  >> rw [converge_in_dist_alt']
-  >> cheat
-QED
+  >> fs [normal_rv_def, converge_in_dist_alt']
+  >> rpt STRIP_TAC
 
+     >> Q.ABBREV_TAC ‘M = λn. expectation p (Normal ∘ f ∘ real ∘ R n)’
+     >> Q.ABBREV_TAC ‘Q = expectation p (Normal ∘ f ∘ real ∘ N)’
 (*
-(* Avoiding introducing Y version *)
-Theorem central_limit_alt:
-  ∀p X N s b.
-    prob_space p ∧
-    normal_rv N p 0 1 ∧
-    (∀i. real_random_variable (X i) p) ∧
-    (∀i j. indep_vars p (X i) (X j) Borel Borel) ∧
-    (∀i. expectation p (X i) = 0) ∧
-    (∀i. central_moment p (X i) 2 < +∞) ∧
-    (∀i. integrable p (X i))  ∧
-    (∀n. s n = sqrt (second_moments p X n)) ∧
-    (∀n. b n = third_moments p X n) ∧
-    ((λn. b n / (s n)³) ⟶ 0) sequentially ⇒
-    ((λn x. ∑ (λi. X i x) (count1 n) / s n) ⟶ N) (in_distribution p)
-Proof
-  rpt STRIP_TAC
-  >> Q.ABBREV_TAC ‘Z = λn x. ∑ (λi. X i x) (count1 n) / s n’
-  >> fs[normal_rv_def]
-  >> Know ‘∀i. real_random_variable (Z i) p’
-  >- (cheat)
-  >> DISCH_TAC
-  >> rw [converge_in_dist_alt']
-  >> MP_TAC (Q.SPECL [‘f’, ‘diff’, ‘0’, ‘Z n’, ‘3’]
-              TAYLOR_THEOREM)
-  >> cheat (* conflict on type of Z *)
+
+     >> ‘expectation p (Normal ∘ f ∘ real ∘ N) ≠ NegInf ∧
+         expectation p (Normal ∘ f ∘ real ∘ N) ≠ PosInf’ by cheat
+     >> ‘∃a. expectation p (Normal ∘ f ∘ real ∘ N) = Normal a’ by METIS_TAC [extreal_cases]
+     >> rw []
+
+     >> ‘∀n. expectation p (Normal ∘ f ∘ real ∘ R n) ≠ NegInf ∧
+             expectation p (Normal ∘ f ∘ real ∘ R n) ≠ PosInf’ by cheat
+     >> Know ‘∃c. (λn. expectation p (Normal ∘ f ∘ real ∘ R n)) = Normal o c’
+     >- (cheat)
+     >> DISCH_TAC
+     >> rw []
+            >> rw []
+     >> irule lim_sequentially_imp_extreal_lim
+     >> irule extreal_lim_sequentially_eq *)
+
+     >> cheat
 QED
-*)
-(*
-val measurable_distr = new_definition ("measurable_distr",
-                                       ``measurable_distr p X = (\s. if s IN subsets borel then distribution p X s else 0)``);
-
-val normal_pmeasure = new_definition("normal_pmeasure",
-                                     ``normal_pmeasure mu sig =
-                                     (\A. if A IN measurable_sets lborel then
-                                            pos_fn_integral lborel
-                                                            (\x. (\x. Normal (normal_density mu sig x)) x *
-                                                                 indicator_fn A x) else 0)``);
-
-val normal_rv = new_definition("normal_rv",``normal_rv X p mu sig =
-                               (random_variable X p borel /\
-                                (measurable_distr p X = normal_pmeasure mu sig))``);
-
-
-(* normal_rv gets from hvg's people*)
-Theorem central_limit_alt':
-  ∀p X N s b.
-              prob_space p ∧
-              normal_rv N p 0 1 ∧
-              (∀i. real_random_variable (Normal o (X i)) p) ∧
-              (∀i j. indep_vars p (Normal o (X i)) (Normal o (X j)) Borel Borel) ∧
-              (∀i. expectation p (Normal o (X i)) = 0) ∧
-              (∀i. central_moment p (Normal o (X i)) 2 < +∞) ∧
-              (∀i. integrable p (Normal o (X i)))  ∧
-              (∀n. s n = sqrt (second_moments p (λi. Normal o (X i)) n)) ∧
-              (∀n. b n = third_moments p (λi. Normal o (X i)) n) ∧
-              ((λn. b n / (s n)³) ⟶ 0) sequentially ⇒
-              ((λn x. ∑ (Normal o (λi. X i x)) (count1 &n) / s n) ⟶ Normal o N) (in_distribution p)
-Proof
-    rpt STRIP_TAC
- >> Q.ABBREV_TAC ‘Z = λn x. ∑ (Normal o (λi. X i x)) (count1 n) / s n’
- >> fs[normal_rv]
- >> Know ‘∀i. real_random_variable (Z i) p’
- >- (rw [Abbr ‘Z’] \\
-     Q.ABBREV_TAC ‘C =  sqrt (second_moments p (λi. Normal ∘ X i) i)’ \\
-     Know ‘0 < C’
-     >- (cheat) \\
-     DISCH_TAC \\
-     ‘C ≠ 0’ by cheat \\
-     ‘inv(C) ≠ NegInf ∧ inv(C) ≠ PosInf’ by METIS_TAC[inv_not_infty] \\
-     ‘∃r. Normal r = inv(C)’ by METIS_TAC[extreal_cases] \\
-     Q.ABBREV_TAC ‘D = λx. ∑ (Normal ∘ (λi. X i x)) (count1 i)’ \\
-     ‘∀x. D x = ∑ (Normal ∘ (λi. X i x)) (count1 i)’ by rw[Abbr ‘D’] \\
-     Know ‘∀x. D x ≠ NegInf’
-     >- (rw[Abbr ‘D’] \\
-         MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_NEGINF \\
-         CONJ_TAC >- REWRITE_TAC [FINITE_COUNT] \\
-         Q.X_GEN_TAC ‘x'’ \\
-         FULL_SIMP_TAC std_ss [real_random_variable_def]\\
-         Q.PAT_X_ASSUM ‘ ∀i'.
-                              random_variable (Normal ∘ X i') p Borel ∧
-                              ∀x. x ∈ p_space p ⇒ Normal (X i' x) ≠ −∞ ∧ Normal (X i' x) ≠ +∞’
-         (MP_TAC o Q.SPEC ‘x'’) \\
-         STRIP_TAC \\
-         POP_ASSUM (MP_TAC o Q.SPEC ‘x’) \\
-         STRIP_TAC \\
-         cheat) \\
-     DISCH_TAC \\
-     Know ‘∀x. D x ≠ PosInf’
-     >- (rw[Abbr ‘D’] \\
-         MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_POSINF \\
-         cheat) \\
-     DISCH_TAC \\
-     ‘∀x. D x / C = inv(C) * D x’ by METIS_TAC[div_eq_mul_linv] \\
-     ‘∀x. D x / C = Normal r * D x’ by METIS_TAC[div_eq_mul_linv] \\
-     rw[Abbr ‘D’] \\
-     FULL_SIMP_TAC std_ss [] \\
-     cheat)
- >> DISCH_TAC
- >> MP_TAC (Q.SPECL [‘p’, ‘Z’, ‘Normal o N’]
-            converge_in_dist_alt')
- >> impl_tac
- >- (simp [real_random_variable_def] \\
-    (* real_random_variable (Normal ∘ N) p *)
-     FULL_SIMP_TAC std_ss [random_variable_def] \\
-     MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' \\
-    (* sigma_algebra (p_space p,events p) *)
-     FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA_BOREL, prob_space_def, p_space_def, events_def, measure_space_def])
- >> rw []
- >> qabbrev_tac ‘g = Normal o f o real’
- >> ‘∀n. Normal ∘ f ∘ real ∘ Z n = g o Z n’ by METIS_TAC [o_ASSOC] >> POP_ORW
- >> ‘Normal ∘ f ∘ real ∘ Normal ∘ N = g o Normal o N’ by METIS_TAC [o_ASSOC] >> POP_ORW
- >> ‘∀n. expectation p (g o Z n) ≠ PosInf’ by cheat
- >> ‘∀n. expectation p (g o Z n) ≠ NegInf’ by cheat
- >> ‘∃(h: num -> real). ∀n. expectation p (g o Z n) = (Normal o h) n’ by cheat
- >> rw []
- >> ‘expectation p (g ∘ Normal ∘ N) ≠ PosInf’ by cheat
- >> ‘expectation p (g ∘ Normal ∘ N) ≠ NegInf’ by cheat
- >> ‘∃c. expectation p (g ∘ Normal ∘ N) = Normal c’ by METIS_TAC [extreal_cases]
- >> rw []
- >> MP_TAC (Q.SPECL [‘λn. h n’, ‘c’]
-            lim_sequentially_imp_extreal_lim)
- >> impl_tac
- >> rw [LIM_SEQUENTIALLY_SEQ]
- >> MP_TAC (Q.SPECL [‘h’, ‘c’, ‘&n’]
-            LIM_NULL)
- >> cheat
-QED
-*)
 
 (* ------------------------------------------------------------------------- *)
 (*  Moment generating function                                               *)
