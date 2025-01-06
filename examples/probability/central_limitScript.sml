@@ -1420,7 +1420,6 @@ Definition third_moment_def:
   third_moment p X = central_moment p X 3
 End
 
-
 Theorem taylor_clt_tactic1[local]:
     ∀p X Y (diff :num -> real -> real) n f.
             prob_space p ∧
@@ -1456,6 +1455,24 @@ QED
 QED
 *)
 
+Theorem in_borel_measurable_diff:
+    ∀a f g diff.
+       sigma_algebra a ∧ f ∈ borel_measurable a ∧ diff 0 = f ∧
+       (∀x. x ∈ space a ⇒ g x = diff 1 (f x)) ⇒
+       g ∈ borel_measurable a
+Proof
+  cheat
+QED
+
+Theorem in_borel_measurable_composite:
+    ∀a f g h.
+       sigma_algebra a ∧ f ∈ borel_measurable a ∧
+       g ∈ borel_measurable a ∧ (∀x. x ∈ space a ⇒ h x = (f o g) x) ⇒
+       h ∈ borel_measurable a
+Proof
+  cheat
+QED
+
 Theorem TAYLOR_CLT_EXPECTATION[local]:
     ∀p X Y (diff :num -> real -> real) f.
             prob_space p ∧
@@ -1475,35 +1492,42 @@ Theorem TAYLOR_CLT_EXPECTATION[local]:
             expectation p (λx. Normal (diff 1 (Y x))) *
             expectation p (Normal ∘ (λx. X x)) +
             1 / 2 * expectation p (λx. Normal (diff 2 (Y x))) *
-            expectation p (Normal ∘ (λx. X x powr 2)))) ≤
+            expectation p (Normal ∘ (λx. X x pow 2)))) ≤
             sup {abs (Normal (diff 3 x)) | x | T} / 6 * expectation p (abs ∘ Normal ∘ (λx. (X x)³))
 Proof
     rpt STRIP_TAC
  >> Cases_on ‘∀x. X x = 0’
  >- (simp [o_DEF, normal_0, abs_0, zero_rpow, expectation_zero] \\
-     ‘expectation p (λx. Normal ((0 powr 2))) = 0’ by cheat \\
-       (* fs [zero_rpow, normal_0, expectation_zero] \\ *)
-     POP_ORW \\
-     simp [mul_rzero] \\
-
-     ‘∀x. Normal (f (Y x)) ≠ NegInf ∧ Normal (f (Y x)) ≠ PosInf’ by METIS_TAC [extreal_not_infty] \\
-
      Know ‘expectation p (λx. Normal (f (Y x))) ≠ PosInf ∧
            expectation p (λx. Normal (f (Y x))) ≠ NegInf’
      >- (irule expectation_finite \\
          fs [bounded_def] \\
          irule integrable_bounded \\
          fs [prob_space_def, random_variable_def] \\
-         CONJ_ASM2_TAC
-         >- ((MP_TAC o (Q.SPECL [‘measurable_space p’, ‘λx. Normal (f ((Y :α -> real) x))’]) o
-                       (INST_TYPE [beta |-> ``:real``])) IN_MEASURABLE_BOREL_NORMAL_REAL \\
-          simp [] \\
-          cheat) \\
-      (*   Q.PAT_X_ASSUM ‘∀x. (∃x'. x = f x') ⇒ abs x ≤ a’ (MP_TAC o Q.SPEC ‘Normal (f (Y x))’)
-         qexists ‘λx. a’ *)
+         ONCE_REWRITE_TAC [CONJ_SYM] \\
+         CONJ_TAC
+         >- (qexists ‘λx. Normal a’ \\
+             ONCE_REWRITE_TAC [CONJ_SYM] \\
+             CONJ_TAC
+             >- (irule integrable_const \\
+                 fs [extreal_1_simps]) \\
+             BETA_TAC \\
+         (*  GEN_TAC \\
+             STRIP_TAC
+             Q.PAT_X_ASSUM ‘∀x. (∃x'. x = f x') ⇒ abs x ≤ a’
+             (MP_TAC o (Q.SPEC ‘Normal (f (Y x))’)) *)
+             cheat) \\
 
-              (* integrable p (λx. Normal (f (Y x)))*)
-         cheat) \\
+         (* (λx. Normal (f (Y x))) ∈ Borel_measurable (measurable_space p) *)
+         (MP_TAC o (Q.SPECL [‘measurable_space p’, ‘λx. f ((Y :α -> real) x)’]) o
+                   (INST_TYPE [beta |-> ``:real``])) (IN_MEASURABLE_BOREL_IMP_BOREL') \\
+         simp [] \\
+         Know ‘(λx. f (Y x)) ∈ borel_measurable (measurable_space p)’
+         >- (‘f ∈ borel_measurable borel’
+             by simp [in_borel_measurable_continuous_on] \\
+            cheat) \\
+         DISCH_TAC \\
+         fs [o_DEF]) \\
      rw [sub_refl])
  >> FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
  >> MP_TAC (Q.SPECL [‘diff’, ‘f’, ‘Y x’, ‘abs (X x)’] TAYLOR_CLT_LEMMA)
@@ -1511,37 +1535,49 @@ Proof
  >> STRIP_TAC
  >> Q.ABBREV_TAC ‘M = sup {abs (Normal (diff 3 x)) | x | T}’
  >> FULL_SIMP_TAC std_ss []
+
  >> Know ‘expectation p (λx. Normal (diff 1 (Y x))) *
-          expectation p (λx. Normal (f (X x))) =
-          expectation p (λx. Normal (diff 1 (Y x)) * Normal (f (X x)))’
+          expectation p (Normal ∘ (λx. X x)) =
+          expectation p (λx. Normal (diff 1 (Y x)) * (Normal (X x)))’
  >- ((MP_TAC o (Q.SPECL [‘p’, ‘λx. Normal ((diff :num -> real -> real) 1 (Y x))’,
-                         ‘λx. Normal ((f :real -> real) (X x))’]) o
+                              ‘Normal ∘ (λx. X x)’]) o
                (INST_TYPE [beta |-> ``:real``])) (GSYM indep_vars_expectation) \\
       simp [] \\
       Know ‘real_random_variable (λx. Normal (diff 1 (Y x))) p’
-     >- (cheat) \\
+      >- (cheat) \\
       DISCH_TAC \\
-      Know ‘real_random_variable (λx. Normal (f (X x))) p’
-     >- (Know ‘random_variable (f o X) p borel’
-         >- (irule random_variable_comp \\
-             simp [in_borel_measurable_continuous_on]) \\
-             simp [o_DEF] \\
-         DISCH_TAC \\
-         METIS_TAC [o_DEF, real_to_extreal_rv]) \\
-      DISCH_TAC \\
-      Know ‘indep_vars p (λx. Normal (diff 1 (Y x))) (λx. Normal (f (X x)))
-            Borel Borel’
+      ‘real_random_variable (Normal ∘ (λx. X x)) p’ by METIS_TAC [o_DEF, real_to_extreal_rv] \\
+      Know ‘indep_vars p (λx. Normal (diff 1 (Y x)))
+                         (Normal ∘ (λx. X x)) Borel Borel’
       >- (cheat) \\
       DISCH_TAC \\
       Know ‘integrable p (λx. Normal (diff 1 (Y x)))’
       >- (cheat) \\
       DISCH_TAC \\
-      Know ‘integrable p (λx. Normal (f (X x)))’
-      >- (cheat) \\
-      DISCH_TAC \\
-      FULL_SIMP_TAC std_ss [])
+      ‘integrable p (Normal ∘ (λx. X x))’ by fs [o_DEF] \\
+      rw [])
  >> DISCH_TAC
  >> POP_ORW
+ >> Know ‘1 / 2 * expectation p (λx. Normal (diff 2 (Y x))) *
+          expectation p (Normal ∘ (λx. (X x)²)) =
+          expectation p (λx. Normal (1 / 2) * Normal (diff 2 (Y x)) * Normal ((X x)²))’
+  >- (‘Normal (1 / 2 :real) = (1 / 2 :extreal)’ by cheat \\
+      POP_ASSUM (rw o wrap o SYM) \\
+      Know ‘Normal (1 / 2) * expectation p (λx. Normal (diff 2 (Y x))) =
+            expectation p (λx. Normal (1 / 2) * Normal (diff 2 (Y x)))’
+      >- (MP_TAC (Q.SPECL [‘p’, ‘λx. Normal ((diff :num -> real -> real) 2 (Y x))’, ‘1 / 2’]
+                 (GSYM expectation_cmul)) \\
+          simp [] \\
+          Know ‘integrable p (λx. Normal (diff 2 (Y x)))’
+          >- (cheat) \\
+          simp []) \\
+      DISCH_TAC \\
+      POP_ORW \\
+     (MP_TAC o (Q.SPECL [‘p’, ‘λx. Normal (1 / 2) * Normal ((diff :num -> real -> real) 2 (Y x))’,
+                              ‘Normal ∘ (λx. (X x)²)’]) o
+               (INST_TYPE [beta |-> ``:real``])) (GSYM indep_vars_expectation) \\
+      simp [] \\
+      cheat)
  >> cheat
 QED
 
@@ -1663,7 +1699,6 @@ Theorem clt_tactic1:
   ∀p X Y N s b. prob_space p ∧
                 (∀i. real_random_variable (X i) p) ∧
                 (∀i j. indep_vars p (X i) (X j) Borel Borel) ∧
-                (∀i j. indep_vars p (Y i) (Y j) Borel Borel) ∧
                 (∀i. expectation p (X i) = 0) ∧
                 (∀i. central_moment p (X i) 2 < PosInf) ∧
                 (∀i. integrable p (X i)) ∧
