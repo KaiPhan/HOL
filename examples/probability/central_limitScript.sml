@@ -16,7 +16,7 @@ open util_probTheory extrealTheory sigma_algebraTheory measureTheory
 
 open distributionTheory realaxTheory;
 
-open limTheory;
+(* open limTheory; *)
 
 val _ = new_theory "central_limit";
 
@@ -545,6 +545,7 @@ Proof
  >> simp []
 QED
 
+(*
 Theorem BigO_SUM:
   ∀f g.
         (∀n. BigO (f n) (g n)) ⇒
@@ -559,7 +560,9 @@ Proof
      simp[])
  >> Q.ABBREV_TAC ‘C = sup (IMAGE f' (count1 n'))’
  >> Q.ABBREV_TAC ‘N = MAX_SET (IMAGE f'' (count1 n'))’
- >> qexistsl_tac [‘C’, ‘N’]
+
+
+    >> qexistsl_tac [‘C’, ‘N’]
  >> sg ‘0 < C’
     (* 0 < C *)
  >- (simp [Abbr ‘C’] \\
@@ -615,6 +618,24 @@ Proof
       >- (‘f'' i ≤ N’ by rw [Abbr ‘N’, in_max_set] \\
           METIS_TAC [LE_TRANS]) \\
       FULL_SIMP_TAC std_ss [] \\
+
+
+      Know ‘∀n. n ≤ n' ⇒ f' n ≤ C’
+      >- (rw [Abbr ‘C’] \\
+          irule REAL_SUP_UBOUND_LE' \\
+          simp [] \\
+          qexists ‘REAL_SUM_IMAGE f' (count1 n')’ \\
+          rw [] \\
+          rename1 ‘j < SUC n'’ \\
+          irule REAL_SUM_IMAGE_POS_MEM_LE \\
+          simp [] \\
+          GEN_TAC \\
+          rw [] \\
+          ‘0 ≤ f' i’ by cheat \\
+          cheat)
+      >> DISCH_TAC
+
+
       Know ‘f' i * abs (g i x) ≤ abs (C * abs (g i x))’
       >- (‘abs (C * abs (g i x)) = abs C * abs (g i x)’ by METIS_TAC [ABS_MUL, ABS_ABS] \\
           ‘0 ≤ C’ by METIS_TAC [REAL_LT_IMP_LE] \\
@@ -632,7 +653,6 @@ Proof
                   GEN_TAC \\
                   MP_TAC (Q.SPEC ‘IMAGE f' (count1 n')’ REAL_SUP_UBOUND_LE') \\
                   rw [] \\
-
                     cheat) \\
               simp []) \\
           DISCH_TAC \\
@@ -644,6 +664,7 @@ Proof
       METIS_TAC [REAL_LE_TRANS])
   >> simp []
 QED
+*)
 
 Theorem partial_sum_telescoping:
   ∀(X: num -> 'a -> real) Y (Z: num -> 'a -> real) (n:num) (j:num) x.
@@ -740,7 +761,7 @@ Proof
  >> simp []
 QED
 
-Theorem real_to_extreal_rv:
+Theorem real_to_extreal_rv[local]:
     ∀p X. prob_space p ∧ random_variable X p borel ⇒
           real_random_variable (Normal o X) p
 Proof
@@ -749,7 +770,7 @@ Proof
  >> FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA_BOREL, prob_space_def, p_space_def, events_def, measure_space_def]
 QED
 
-Theorem extreal_to_real_rv:
+Theorem extreal_to_real_rv[local]:
     ∀p X. prob_space p ∧
         real_random_variable (Normal o X) p ⇒
         random_variable X p borel
@@ -760,6 +781,23 @@ Proof
  >> FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA_BOREL, prob_space_def, p_space_def, events_def, measure_space_def]
  >> rw [o_DEF]
  >> METIS_TAC []
+QED
+
+Theorem real_random_variable_equiv:
+  ∀p X. prob_space p ⇒
+        (real_random_variable (Normal o X) p ⇔
+        random_variable X p borel)
+Proof
+    rw [real_random_variable_def, random_variable_def,
+        AND_INTRO_THM, EQ_IMP_THM]
+ >- (MP_TAC (Q.SPECL [‘(p_space p,events p)’, ‘Normal o X’]
+             in_borel_measurable_from_Borel) \\
+     FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA_BOREL, prob_space_def,
+                           p_space_def, events_def, measure_space_def] \\
+     rw [o_DEF] \\
+     METIS_TAC [])
+ >> irule IN_MEASURABLE_BOREL_IMP_BOREL'
+ >> FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA_BOREL, prob_space_def, p_space_def, events_def, measure_space_def]
 QED
 
 (* ------------------------------------------------------------------------- *)
@@ -1093,16 +1131,16 @@ Proof
                              (diff m diffl diff (SUC m) t) t’
        (MP_TAC o Q.SPECL [‘m’, ‘t + a’])
      >> DISCH_TAC
-     >> MP_TAC (Q.SPECL [‘diff (m:num)’, ‘λx. (x + a)’, ‘diff (SUC m) (t + a:real)’, ‘1’, ‘t’] DIFF_CHAIN)
+     >> MP_TAC (Q.SPECL [‘diff (m:num)’, ‘λx. (x + a)’, ‘diff (SUC m) (t + a:real)’, ‘1’, ‘t’] limTheory.DIFF_CHAIN)
      >> impl_tac
      >- (CONJ_TAC
          >- (BETA_TAC \\
              METIS_TAC [])
          (* ((λx. x + a) diffl 1) t *)
          >> Know ‘((λx. x + a) diffl (1 + 0)) t’
-         >- (MP_TAC (Q.SPECL [‘λx. x’, ‘λx. a’, ‘1’, ‘0’, ‘t’] DIFF_ADD) \\
+         >- (MP_TAC (Q.SPECL [‘λx. x’, ‘λx. a’, ‘1’, ‘0’, ‘t’] limTheory.DIFF_ADD) \\
              impl_tac \\
-             METIS_TAC [DIFF_X, DIFF_CONST] \\
+             METIS_TAC [limTheory.DIFF_X, limTheory.DIFF_CONST] \\
              BETA_TAC \\
              simp [])
          >> simp [REAL_ADD_RID])
@@ -1464,15 +1502,6 @@ Proof
   cheat
 QED
 
-Theorem in_borel_measurable_composite:
-    ∀a f g h.
-       sigma_algebra a ∧ f ∈ borel_measurable a ∧
-       g ∈ borel_measurable a ∧ (∀x. x ∈ space a ⇒ h x = (f o g) x) ⇒
-       h ∈ borel_measurable a
-Proof
-  cheat
-QED
-
 Theorem TAYLOR_CLT_EXPECTATION[local]:
     ∀p X Y (diff :num -> real -> real) f.
             prob_space p ∧
@@ -1524,7 +1553,8 @@ Proof
          simp [] \\
          Know ‘(λx. f (Y x)) ∈ borel_measurable (measurable_space p)’
          >- (‘f ∈ borel_measurable borel’
-             by simp [in_borel_measurable_continuous_on] \\
+               by simp [in_borel_measurable_continuous_on] \\
+             (* MEASURABLE_COMP *)
             cheat) \\
          DISCH_TAC \\
          fs [o_DEF]) \\
@@ -1578,7 +1608,10 @@ Proof
                (INST_TYPE [beta |-> ``:real``])) (GSYM indep_vars_expectation) \\
       simp [] \\
       cheat)
- >> cheat
+ >> DISCH_TAC
+ >> POP_ORW
+
+    >> cheat
 QED
 
 
@@ -1822,6 +1855,11 @@ Proof
 
      >> Q.ABBREV_TAC ‘M = λn. expectation p (Normal ∘ f ∘ real ∘ R n)’
      >> Q.ABBREV_TAC ‘Q = expectation p (Normal ∘ f ∘ real ∘ N)’
+     >> Know ‘((λx. M x - Q) --> 0) sequentially’
+     >- (rw [Abbr ‘M’, Abbr ‘Q’] \\
+         (* real_topologyTheory.LIM_NULL *)
+     cheat)
+
 (*
 
      >> ‘expectation p (Normal ∘ f ∘ real ∘ N) ≠ NegInf ∧
