@@ -16,8 +16,6 @@ open util_probTheory extrealTheory sigma_algebraTheory measureTheory
 
 open distributionTheory realaxTheory;
 
-(* open limTheory; *)
-
 val _ = new_theory "central_limit";
 
 Theorem liapounov_ineq_lemma:
@@ -667,10 +665,10 @@ QED
 *)
 
 Theorem partial_sum_telescoping:
-  ∀(X: num -> 'a -> real) Y (Z: num -> 'a -> real) (n:num) (j:num) x.
+  ∀(X: num -> 'a -> real) Y (n:num) (j:num) x.
       1 ≤ j ∧ j ≤ n ∧
-      j + 1 ≤ n ∧
-      (∀j. Z j x = ∑ (λi. Y i x) {1 .. (j - 1)} +
+      j + 1 ≤ n ⇒
+      ∀(Z: num -> 'a -> real). (∀j. Z j x = ∑ (λi. Y i x) {1 .. (j - 1)} +
                    ∑ (λi. X i x) {(j + 1) .. n}) ⇒
       Y j x + Z j x = X (j + 1) x + Z (j + 1) x
 Proof
@@ -1541,22 +1539,27 @@ Proof
              >- (irule integrable_const \\
                  fs [extreal_1_simps]) \\
              BETA_TAC \\
-         (*  GEN_TAC \\
-             STRIP_TAC
+             GEN_TAC \\
+             STRIP_TAC \\
+             ‘abs (Normal (f (Y x))) = Normal (abs (f (Y x)))’ by METIS_TAC [extreal_abs_def] \\
+             POP_ORW \\
+             simp [extreal_11] \\
              Q.PAT_X_ASSUM ‘∀x. (∃x'. x = f x') ⇒ abs x ≤ a’
-             (MP_TAC o (Q.SPEC ‘Normal (f (Y x))’)) *)
+              (MP_TAC o (Q.SPEC ‘f ((Y :α -> real) x)’)) \\
              cheat) \\
 
          (* (λx. Normal (f (Y x))) ∈ Borel_measurable (measurable_space p) *)
          (MP_TAC o (Q.SPECL [‘measurable_space p’, ‘λx. f ((Y :α -> real) x)’]) o
                    (INST_TYPE [beta |-> ``:real``])) (IN_MEASURABLE_BOREL_IMP_BOREL') \\
          simp [] \\
-         Know ‘(λx. f (Y x)) ∈ borel_measurable (measurable_space p)’
-         >- (‘f ∈ borel_measurable borel’
-               by simp [in_borel_measurable_continuous_on] \\
-             (* MEASURABLE_COMP *)
-            cheat) \\
+         Know ‘(f o Y) ∈ borel_measurable (measurable_space p)’
+         >- (MATCH_MP_TAC MEASURABLE_COMP \\
+             Q.EXISTS_TAC ‘borel’ \\
+             ‘f IN borel_measurable borel’ by PROVE_TAC [in_borel_measurable_continuous_on] \\
+             fs [ p_space_def, events_def]) \\
          DISCH_TAC \\
+         ‘Normal o f o Y ∈ Borel_measurable (measurable_space p)’
+         by METIS_TAC [IN_MEASURABLE_BOREL_IMP_BOREL] \\
          fs [o_DEF]) \\
      rw [sub_refl])
  >> FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
@@ -1610,8 +1613,7 @@ Proof
       cheat)
  >> DISCH_TAC
  >> POP_ORW
-
-    >> cheat
+ >> cheat
 QED
 
 
@@ -1735,11 +1737,13 @@ Theorem clt_tactic1:
                 (∀i. expectation p (X i) = 0) ∧
                 (∀i. central_moment p (X i) 2 < PosInf) ∧
                 (∀i. integrable p (X i)) ∧
-                (∀n. s n = sqrt (second_moments p X n)) ⇒
+                (∀n. s n = sqrt (second_moments p X n)) ∧
+                (∀n. s n ≠ 0) ⇒
                 ∀i. real_random_variable (((λn x. ∑ (λi. X i x) (count1 n) / s n)) i) p
 Proof
   rpt STRIP_TAC
   >> Q.ABBREV_TAC ‘C = sqrt (second_moments p X i)’
+
   >> Cases_on ‘C = 0’
   >- (rw[Abbr ‘C’] \\
       cheat)
@@ -1840,6 +1844,7 @@ Theorem central_limit:
                (∀i. central_moment p (X i) 2 < PosInf) ∧
                (∀i. integrable p (X i)) ∧
                (∀n. s n = sqrt (second_moments p X n)) ∧
+               (∀n. s n ≠ 0) ∧
                (∀n. b n = third_moments p X n) ∧
                ((\n. b n / (s n pow 3)) --> 0) sequentially ⇒
                ((\n x. (SIGMA (λi. X i x) (count1 n)) / s n) --> N) (in_distribution p)
@@ -1855,10 +1860,10 @@ Proof
 
      >> Q.ABBREV_TAC ‘M = λn. expectation p (Normal ∘ f ∘ real ∘ R n)’
      >> Q.ABBREV_TAC ‘Q = expectation p (Normal ∘ f ∘ real ∘ N)’
-     >> Know ‘((λx. M x - Q) --> 0) sequentially’
-     >- (rw [Abbr ‘M’, Abbr ‘Q’] \\
-         (* real_topologyTheory.LIM_NULL *)
-     cheat)
+     (* real_topologyTheory.LIM_NULL *)
+     >> Suff ‘((λx. M x - Q) --> 0) sequentially’
+     >- (cheat)
+     >> rw [Abbr ‘M’, Abbr ‘Q’]
 
 (*
 
