@@ -558,9 +558,7 @@ Proof
      simp[])
  >> Q.ABBREV_TAC ‘C = sup (IMAGE f' (count1 n'))’
  >> Q.ABBREV_TAC ‘N = MAX_SET (IMAGE f'' (count1 n'))’
-
-
-    >> qexistsl_tac [‘C’, ‘N’]
+ >> qexistsl_tac [‘C’, ‘N’]
  >> sg ‘0 < C’
     (* 0 < C *)
  >- (simp [Abbr ‘C’] \\
@@ -577,7 +575,23 @@ Proof
  >> STRIP_TAC
  >> (MP_TAC o (Q.SPECL [`λi. f i (x: num)`,`count1 n'`]) o
               (INST_TYPE [alpha |-> ``:num``])) REAL_SUM_IMAGE_ABS_TRIANGLE
- >> rw [o_DEF]
+    >> rw [o_DEF]
+
+          Know ‘∀n. n ≤ n' ⇒ f' n ≤ C’
+    >- (rw [Abbr ‘C’] \\
+        irule REAL_SUP_UBOUND_LE' \\
+        simp [] \\
+        qexists ‘REAL_SUM_IMAGE f' (count1 n')’ \\
+        rw [] \\
+        rename1 ‘i < SUC n'’ \\
+        irule REAL_SUM_IMAGE_POS_MEM_LE \\
+        simp [] \\
+        GEN_TAC \\
+        rw [] \\
+        ‘0 ≤ f' i’ by cheat \\
+        cheat)
+    >> DISCH_TAC
+
  >> Know ‘∑ (λi. abs (C * abs (g i x))) (count1 n') = C * abs (∑ (λi. abs (g i x)) (count1 n'))’
  >- (‘∑ (λi. abs (C * abs (g i x))) (count1 n') =
       ∑ (λi. abs C * abs (abs (g i x))) (count1 n')’ by rw [ABS_MUL] \\
@@ -618,20 +632,6 @@ Proof
       FULL_SIMP_TAC std_ss [] \\
 
 
-      Know ‘∀n. n ≤ n' ⇒ f' n ≤ C’
-      >- (rw [Abbr ‘C’] \\
-          irule REAL_SUP_UBOUND_LE' \\
-          simp [] \\
-          qexists ‘REAL_SUM_IMAGE f' (count1 n')’ \\
-          rw [] \\
-          rename1 ‘j < SUC n'’ \\
-          irule REAL_SUM_IMAGE_POS_MEM_LE \\
-          simp [] \\
-          GEN_TAC \\
-          rw [] \\
-          ‘0 ≤ f' i’ by cheat \\
-          cheat)
-      >> DISCH_TAC
 
 
       Know ‘f' i * abs (g i x) ≤ abs (C * abs (g i x))’
@@ -1491,6 +1491,27 @@ QED
 QED
 *)
 
+Definition diff_def :
+    (diff 0       f x = f x) /\
+    (diff (SUC m) f x = @y. ((diff m f) diffl y)(x))
+End
+
+Theorem diff_thm :
+    !f. (!m t. ?x. (diff m f diffl x) t) ==>
+        (diff 0 f = f) /\
+        (!m t. ((diff m f) diffl (diff (SUC m) f t))(t))
+Proof
+    rw [diff_def, FUN_EQ_THM]
+ >> SELECT_ELIM_TAC >> simp []
+QED
+
+(*
+Definition higher_differentiable_def:
+  higher_differentiable 0 f x ⇔ T ∧
+  (∀n. higher_differentiable (SUC n) f x ⇔ higher_differentiable n f x ∧ ∃l. (diff n f diffl l) x)
+End
+*)
+
 Theorem in_borel_measurable_diff:
     ∀a f g diff.
        sigma_algebra a ∧ f ∈ borel_measurable a ∧ diff 0 = f ∧
@@ -1500,6 +1521,7 @@ Proof
   cheat
 QED
 
+(*
 Theorem TAYLOR_CLT_EXPECTATION[local]:
     ∀p X Y (diff :num -> real -> real) f.
             prob_space p ∧
@@ -1546,6 +1568,11 @@ Proof
              simp [extreal_11] \\
              Q.PAT_X_ASSUM ‘∀x. (∃x'. x = f x') ⇒ abs x ≤ a’
               (MP_TAC o (Q.SPEC ‘f ((Y :α -> real) x)’)) \\
+             impl_tac
+             >- (qexists ‘Y x’ \\
+                 rw []) \\
+                 simp []
+
              cheat) \\
 
          (* (λx. Normal (f (Y x))) ∈ Borel_measurable (measurable_space p) *)
@@ -1615,7 +1642,7 @@ Proof
  >> POP_ORW
  >> cheat
 QED
-
+*)
 
 (*
  >> ‘expectation p (λx. Normal (diff 1 (Y x))) *
@@ -1742,13 +1769,11 @@ Theorem clt_tactic1:
                 ∀i. real_random_variable (((λn x. ∑ (λi. X i x) (count1 n) / s n)) i) p
 Proof
   rpt STRIP_TAC
-  >> Q.ABBREV_TAC ‘C = sqrt (second_moments p X i)’
-
-  >> Cases_on ‘C = 0’
-  >- (rw[Abbr ‘C’] \\
-      cheat)
-  >> Know ‘0 ≤ C’
-  >- (Q.UNABBREV_TAC ‘C’ \\
+  >> BETA_TAC
+  >> ‘sqrt (second_moments p X i) = s i’ by fs []
+  >> Know ‘∀n. 0 ≤ s n’
+  >- (fs [] \\
+         GEN_TAC \\
       MATCH_MP_TAC sqrt_pos_le \\
       rw[second_moments_def] \\
       (* 0 < ∑ (λi. central_moment p (X i) 2) (count1 i) *)
@@ -1760,13 +1785,14 @@ Proof
       ‘moment p (X x) 0 2 = second_moment p (X x) 0’ by EVAL_TAC \\
       simp[] \\
       MP_TAC (Q.SPECL [‘p’, ‘X (x:num)’, ‘0’]
-              second_moment_pos) \\
+               second_moment_pos) \\
       simp[] \\
       DISCH_TAC)
-  >> DISCH_TAC
-  >> ‘0 < C’ by rw[lt_le]
-  >> ‘inv(C) ≠ NegInf ∧ inv(C) ≠ PosInf’ by METIS_TAC[inv_not_infty]
-  >> ‘∃r. Normal r = inv(C)’ by METIS_TAC[extreal_cases]
+      >> DISCH_TAC
+  >> ‘∀n. 0 < s n’ by rw[lt_le]
+  >> ‘∀n. inv(s n) ≠ NegInf ∧ inv(s n) ≠ PosInf’ by METIS_TAC[inv_not_infty]
+  >> ‘∃r. Normal r = inv(s i)’ by METIS_TAC[extreal_cases]
+
   >> Q.ABBREV_TAC ‘D = λx. ∑ (λi. X i x) (count1 i)’
   >> ‘∀x. D x = ∑ (λi. X i x) (count1 i)’ by rw[Abbr ‘D’]
   >> Know ‘∀x. D x ≠ NegInf’
@@ -1789,29 +1815,37 @@ Proof
       MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_POSINF \\
       cheat)
   >> DISCH_TAC
-  >> ‘∀x. D x / C = inv(C) * D x’ by METIS_TAC[div_eq_mul_linv]
-  >> ‘∀x. D x / C = Normal r * D x’ by METIS_TAC[div_eq_mul_linv]
-  >> rw[Abbr ‘D’]
-  (*   ASM_REWRITE_TAC [] *)
-  >> FULL_SIMP_TAC std_ss []
+
+  >> ‘∀x. D x / s i = inv(s i) * D x’ by METIS_TAC[div_eq_mul_linv]
+  >> ‘∀x. D x / s i = Normal r * D x’ by METIS_TAC[div_eq_mul_linv]
+  >> Q.UNABBREV_TAC ‘D’
   >> ‘∀x. real_random_variable (λx. Normal r * ∑ (λi. X i x) (count1 i)) p’
       by rw [real_random_variable_cmul, real_random_variable_sum]
-  >> Know ‘∀x. x IN p_space p ==> inv(C) * ∑ (λi. X i x) (count1 i) = Normal r * ∑ (λi. X i x) (count1 i)’
+  >> Know ‘∀x. x IN p_space p ==>
+               inv(s i) * ∑ (λi. X i x) (count1 i) = Normal r * ∑ (λi. X i x) (count1 i)’
   >- (X_GEN_TAC “x” \\
       DISCH_TAC \\
       METIS_TAC[])
   >> DISCH_TAC
-  >> MP_TAC (Q.SPECL [‘p’, ‘λx. inv(C) * ∑ (λi. X i x) (count1 i)’, ‘λx. Normal r * ∑ (λi. X i x) (count1 i)’]
-             real_random_variable_cong)
+  >> MP_TAC (Q.SPECL [‘p’, ‘λx. inv(s i) * ∑ (λi. X i x) (count1 i)’,
+                           ‘λx. Normal r * ∑ (λi. X i x) (count1 i)’]
+              real_random_variable_cong)
+
   >> impl_tac
-  >> METIS_TAC[]
-  >> METIS_TAC[]
+  >- (PROVE_TAC [])
+  >> MP_TAC (Q.SPECL [‘p’, ‘λx. inv(s i) * ∑ (λi. X i x) (count1 i)’,
+                      ‘λx. ∑ (λi. X i x) (count1 i) / s i’]
+              real_random_variable_cong)
+  >> impl_tac
+  >- (METIS_TAC[])
+  >> METIS_TAC []
 QED
 
+(*
 Theorem clt_tactic2:
   ∀p X Y.
           prob_space p ∧ (∀n. real_random_variable (X n) p) ∧
-          real_random_variable Y p ∧
+          real_random_variable Y p ⇒
           ∀f (diff :num -> real -> real).
               diff 0 = f ∧
               (∀(i :num). i IN {0; 1; 2; 3} ⇒ bounded (IMAGE (diff i) 𝕌(:real))) ∧
@@ -1819,18 +1853,21 @@ Theorem clt_tactic2:
               ((λn. expectation p (Normal ∘ f ∘ real ∘ X n)) ⟶
                     expectation p (Normal ∘ f ∘ real ∘ Y)) sequentially
 Proof
+  rpt STRIP_TAC
+  >> irule converge_in_dist_alt'
   cheat
-QED
-
-  (*
-Theorem lim_null:
-    ∀f l x.
-           (∃N. ∀n. N ≤ n ⇒ f n ≠ +∞ ∧ f n ≠ −∞) ∧ l ≠ +∞ ∧ l ≠ −∞ ⇒
-           (f → l)  ⇔ ((λx. (real o f) x − real o l) → 0)
-Proof
 QED
 *)
 
+Theorem lim_null:
+    ∀f l x.
+           (∃N. ∀n. N ≤ n ⇒ f n ≠ +∞ ∧ f n ≠ −∞) ∧ l ≠ +∞ ∧ l ≠ −∞ ⇒
+           (f --> l) sequentially ⇔ ((λn. (real (f n) − real l)) --> 0) sequentially
+Proof
+  cheat
+QED
+
+(*
 Theorem central_limit:
   ∀p X Y N s b. prob_space p ∧
                 normal_rv N p 0 1 ∧
@@ -1864,6 +1901,22 @@ Proof
      >> Suff ‘((λx. M x - Q) --> 0) sequentially’
      >- (cheat)
      >> rw [Abbr ‘M’, Abbr ‘Q’]
+     >> Know ‘∀x. expectation p (Normal ∘ f ∘ real ∘ Y x) =
+                  expectation p (Normal ∘ f ∘ real ∘ N)’
+     >- (cheat)
+     >> DISCH_TAC
+     >> ‘(λx.
+              expectation p (Normal ∘ f ∘ real ∘ R x) −
+              expectation p (Normal ∘ f ∘ real ∘ N)) =
+         (λx.
+              expectation p (Normal ∘ f ∘ real ∘ R x) −
+              expectation p (Normal ∘ f ∘ real ∘ Y x))’
+        by METIS_TAC []
+     >> DISCH_TAC
+     >> qmatch_abbrev_tac ‘(g --> 0) sequentially’
+                              >> Q.PAT_X_ASSUM ‘g = _’ (ONCE_REWRITE_TAC o wrap)
+          >> simp []
+     >> POP_ASSUM (rw o wrap o SYM)
 
 (*
 
@@ -1884,6 +1937,7 @@ Proof
 
      >> cheat
 QED
+*)
 
 (* ------------------------------------------------------------------------- *)
 (*  Moment generating function                                               *)
