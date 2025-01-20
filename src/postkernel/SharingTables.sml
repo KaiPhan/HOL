@@ -92,8 +92,8 @@ fun build_id_vector strings intpairs =
     Types
    ---------------------------------------------------------------------- *)
 
-datatype shared_type = TYV of string
-                     | TYOP of int list
+open TheoryReader_dtype
+datatype shared_type = datatype encoded_type
 
 type typetable = {tysize : int,
                   tymap : (hol_type, int)Map.dict,
@@ -103,12 +103,15 @@ local
   open HOLsexp
 in
 fun shared_type_encode (TYV s) = String s
-  | shared_type_encode (TYOP is) = List(map Integer is)
+  | shared_type_encode (TYOP {opn,args}) = List(map Integer (opn::args))
 
 fun shared_type_decode s =
     case string_decode s of
         SOME str => SOME (TYV str)
-      | _ => Option.map TYOP (list_decode int_decode s)
+      | _ => case list_decode int_decode s of
+                 NONE => NONE
+               | SOME [] => NONE
+               | SOME (opn::args) => SOME (TYOP {opn=opn, args = args})
 
 val enc_tytable : typetable encoder =
     tagged_encode "type-table" (list_encode shared_type_encode) o List.rev o
@@ -146,7 +149,7 @@ fun make_shared_type ty strtable idtable table =
             (tysize, strtable', idtable',
              {tysize = tysize + 1,
               tymap = Map.insert(tymap, ty, tysize),
-              tylist = TYOP (id :: newargs) :: tylist})
+              tylist = TYOP {opn = id, args = newargs} :: tylist})
           end
       end
 
@@ -157,18 +160,17 @@ fun build_type_vector idv shtylist = let
   fun build1 (shty, (n, tymap)) =
       case shty of
         TYV s => (n + 1, Map.insert(tymap, n, Type.mk_vartype s))
-      | TYOP idargs => let
-          val (id, Args) = valOf (List.getItem idargs)
+      | TYOP {opn,args} => let
           fun mapthis i =
               Map.find(tymap, i)
               handle Map.NotFound =>
                      raise SharingTables ("build_type_vector: (" ^
                                           String.concatWith " "
-                                                (map Int.toString Args) ^
+                                                (map Int.toString args) ^
                                           "), " ^ Int.toString i ^
                                           " not found")
-          val args = map mapthis Args
-          val {Thy,Other} = Vector.sub(idv, id)
+          val args = map mapthis args
+          val {Thy,Other} = Vector.sub(idv, opn)
         in
           (n + 1,
            Map.insert(tymap, n,
@@ -184,11 +186,7 @@ end
     Terms
    ---------------------------------------------------------------------- *)
 
-datatype shared_term = TMV of string * int
-                     | TMC of int * int
-                     | TMAp of int * int
-                     | TMAbs of int * int
-
+datatype shared_term = datatype encoded_term
 type termtable = {termsize : int,
                   termmap : (term, int)Map.dict,
                   termlist : shared_term list}
@@ -500,9 +498,8 @@ type sharing_data_out =
       Term.term Vector.vector * extract_data)
 
 
-type 'a depinfo = {head : 'a * int, deps : ('a * int list) list}
-fun mapdepinfo f ({head = (a,i),deps}:'a depinfo) : 'b depinfo =
-    {head = (f a, i), deps = map (fn (a,l) => (f a, l)) deps}
+fun mapdepinfo f ({me = (a,i),deps}:'a raw_dep) : 'b raw_dep =
+    {me = (f a, i), deps = map (fn (a,l) => (f a, l)) deps}
 
 fun translatepath slist =
     let
@@ -515,69 +512,29 @@ fun translatepath slist =
           [] => OS.Path.toString {arcs = [], isAbs = true, vol = ""}
         | v::arcs => OS.Path.toString {arcs = arcs, isAbs = isAbs, vol = v}
     end
-fun decclass 0 = Axm
-  | decclass 1 = Def
-  | decclass 2 = Thm
-  | decclass i = raise SharingTables ("Bad theorem class: "^Int.toString i)
 
-fun translate_info f ilist =
-    case ilist of
-        [classtag,privtag] =>
-          {loc = Unknown, private = privtag <> 0, class = decclass classtag}
-      | classtag::privatep::exactp::lnum::rest =>
-          {loc = Located{scriptpath = translatepath (map f rest),
-                         linenum = lnum, exact = (exactp <> 0)},
-           private = privatep <> 0, class = decclass classtag}
-      | _ => raise SharingTables "Bad theorem information"
+fun translate_loc f rloc =
+    case rloc of
+        rlUnknown => Unknown
+      | rlLocated {path,linenum,exact} =>
+        Located {
+          scriptpath=translatepath (map f path), linenum = linenum,
+          exact = exact
+        }
 
-fun read_thm strv tmvector thmrec =
+fun read_thm strv tmvector (thmrec:raw_thm) =
     let
-      val {name,depinfo:int depinfo,tagnames,encoded_hypscon,encodedloc} = thmrec
+      val {name,deps,tags,class,private,loc,concl,hyps} = thmrec
       val getstr = (fn i => Vector.sub(strv,i))
-      val depinfo = mapdepinfo getstr depinfo
-      val thminfo = translate_info getstr encodedloc
-      val dd = (#head depinfo, #deps depinfo)
-      val terms = map (Term.read_raw tmvector) encoded_hypscon
+      val depinfo = mapdepinfo getstr deps
+      val loc' = translate_loc getstr loc
+      val dd = (#me depinfo, #deps depinfo)
+      val terms = map (Term.read_raw tmvector) (concl::hyps)
+      val thminfo = {private=private,loc=loc',class=class}
     in
-      (Vector.sub(strv, name), Thm.disk_thm((dd,tagnames), terms), thminfo)
+      (Vector.sub(strv, name), Thm.disk_thm((dd,tags), terms), thminfo)
     end
 
-val dep_decode = let
-  open HOLsexp
-  fun depmunge dilist =
-      case dilist of
-          [] => NONE
-        | (n,[i]) :: rest => SOME{head = (n,i), deps = rest}
-        | _ => NONE
-in
-  Option.mapPartial depmunge o
-  list_decode (pair_decode(int_decode, list_decode int_decode))
-end
-val deptag_decode = let open HOLsexp in
-                      pair_decode(dep_decode, list_decode string_decode)
-                    end
-
-(* really just maps to list of ints that need interpreting once string table
-   is available *)
-fun loc_decode s =
-    let open HOLsexp
-    in
-      case s of
-          Symbol "unknown_loc" => SOME []
-        | _ => list_decode int_decode s
-    end
-
-val thm_decode =
-    let
-      open HOLsexp
-      fun thmmunge(i,(di,tags),loc,tms) =
-          {name = i, depinfo = di, tagnames = tags, encoded_hypscon = tms,
-           encodedloc=loc}
-    in
-      Option.map thmmunge o
-      pair4_decode (int_decode, deptag_decode, loc_decode,
-                    list_decode string_decode)
-    end
 
 val prsexp = HOLPP.pp_to_string 70 HOLsexp.printer
 fun force s dec t =
@@ -585,59 +542,31 @@ fun force s dec t =
         NONE => raise SharingTables ("Couldn't decode \""^s^"\": "^prsexp t)
       | SOME t => t
 
-fun dec_sdata {with_strings,with_stridty} t =
+fun dec_sdata {before_types,before_terms,tables,exports} =
     let
-      open HOLsexp
-      val decoder =
-            tagged_decode "core-data" (
-              pair_decode(
-                tagged_decode "tables" (
-                  pair4_decode(
-                    dec_strings,
-                    tagged_decode "id-table"
-                       (list_decode (pair_decode(int_decode, int_decode))),
-                    tagged_decode "type-table" (list_decode shared_type_decode),
-                    tagged_decode "term-table" (list_decode shared_term_decode)
-                  )
-                ),
-                tagged_decode "exports" (
-                  pair3_decode(
-                    pair_decode( (* types *)
-                      list_decode int_decode,
-                      list_decode (pair_decode(string_decode, int_decode))
-                    ),
-                    pair_decode( (* terms *)
-                      list_decode string_decode,
-                      list_decode (pair_decode(string_decode, string_decode))
-                    ),
-                    (* theorems *) list_decode thm_decode
-                  )
-                )
-              )
-            )
+      val {stringt = strv, idt = intplist, typet = shtylist,
+           termt = shtmlist} = tables
+      val {unnamed_types = raw_untys, named_types = raw_nmtys,
+           unnamed_terms = raw_untms, named_terms = raw_nmtms,
+           thms = rawthms} = exports
+      fun sub v i = Vector.sub(v,i)
+      val _ = before_types ()
+      val idv = build_id_vector strv intplist
+      val tyv = build_type_vector idv shtylist
+      val _ = before_terms tyv
+      val tmv = build_term_vector idv tyv shtmlist
+      val untys = map (fn i => Vector.sub(tyv,i)) raw_untys
+      val nmtys = map (fn (s,i) => (s, Vector.sub(tyv,i))) raw_nmtys
+      val untms = map (Term.read_raw tmv) raw_untms
+      val nmtms = map (fn {name,encoded_term} =>
+                          (name, Term.read_raw tmv encoded_term))
+                      raw_nmtms
+      val thms = map (read_thm strv tmv) rawthms
     in
-      case decoder t of
-          NONE => NONE
-        | SOME ((strv,intplist,shtylist,shtmlist),
-                ((raw_untys, raw_nmtys), (raw_untms, raw_nmtms), rawthms)) =>
-          let
-            fun sub v i = Vector.sub(v,i)
-            val _ = with_strings (fn i => Vector.sub(strv,i))
-            val idv = build_id_vector strv intplist
-            val tyv = build_type_vector idv shtylist
-            val _ = with_stridty (sub strv, sub idv, tyv)
-            val tmv = build_term_vector idv tyv shtmlist
-            val untys = map (fn i => Vector.sub(tyv,i)) raw_untys
-            val nmtys = map (fn (s,i) => (s, Vector.sub(tyv,i))) raw_nmtys
-            val untms = map (Term.read_raw tmv) raw_untms
-            val nmtms = map (fn (nm,s) => (nm, Term.read_raw tmv s)) raw_nmtms
-            val thms = map (read_thm strv tmv) rawthms
-          in
-            SOME (strv,idv,tyv,tmv,
-                  {named_types = nmtys, unnamed_types = untys,
-                   named_terms = nmtms, unnamed_terms = untms,
-                   theorems = thms})
-          end
+      (strv,idv,tyv,tmv,
+       {named_types = nmtys, unnamed_types = untys,
+        named_terms = nmtms, unnamed_terms = untms,
+        theorems = thms})
     end
 
 fun export_from_sharing_data (_, _, _, _, exp) = exp
