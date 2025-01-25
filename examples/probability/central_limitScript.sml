@@ -543,7 +543,6 @@ Proof
  >> simp []
 QED
 
-(*
 Theorem BigO_SUM:
   ∀f g.
         (∀n. BigO (f n) (g n)) ⇒
@@ -575,23 +574,21 @@ Proof
  >> STRIP_TAC
  >> (MP_TAC o (Q.SPECL [`λi. f i (x: num)`,`count1 n'`]) o
               (INST_TYPE [alpha |-> ``:num``])) REAL_SUM_IMAGE_ABS_TRIANGLE
-    >> rw [o_DEF]
-
-          Know ‘∀n. n ≤ n' ⇒ f' n ≤ C’
-    >- (rw [Abbr ‘C’] \\
-        irule REAL_SUP_UBOUND_LE' \\
-        simp [] \\
-        qexists ‘REAL_SUM_IMAGE f' (count1 n')’ \\
-        rw [] \\
-        rename1 ‘i < SUC n'’ \\
-        irule REAL_SUM_IMAGE_POS_MEM_LE \\
-        simp [] \\
-        GEN_TAC \\
-        rw [] \\
-        ‘0 ≤ f' i’ by cheat \\
-        cheat)
-    >> DISCH_TAC
-
+ >> rw [o_DEF]
+ >> Know ‘∀n. n ≤ n' ⇒ f' n ≤ C’
+ >- (rw [Abbr ‘C’] \\
+     irule REAL_SUP_UBOUND_LE' \\
+     simp [] \\
+     qexists ‘REAL_SUM_IMAGE f' (count1 n')’ \\
+     rw [] \\
+     rename1 ‘i < SUC n'’ \\
+     irule REAL_SUM_IMAGE_POS_MEM_LE \\
+     simp [] \\
+     GEN_TAC \\
+     rw [] \\
+     ‘0 < f' x'’ by METIS_TAC [] \\
+     METIS_TAC [REAL_LT_IMP_LE])
+ >> DISCH_TAC
  >> Know ‘∑ (λi. abs (C * abs (g i x))) (count1 n') = C * abs (∑ (λi. abs (g i x)) (count1 n'))’
  >- (‘∑ (λi. abs (C * abs (g i x))) (count1 n') =
       ∑ (λi. abs C * abs (abs (g i x))) (count1 n')’ by rw [ABS_MUL] \\
@@ -630,28 +627,16 @@ Proof
       >- (‘f'' i ≤ N’ by rw [Abbr ‘N’, in_max_set] \\
           METIS_TAC [LE_TRANS]) \\
       FULL_SIMP_TAC std_ss [] \\
-
-
-
-
+      (* abs (f i x) ≤ abs (C * abs (g i x)) *)
       Know ‘f' i * abs (g i x) ≤ abs (C * abs (g i x))’
       >- (‘abs (C * abs (g i x)) = abs C * abs (g i x)’ by METIS_TAC [ABS_MUL, ABS_ABS] \\
           ‘0 ≤ C’ by METIS_TAC [REAL_LT_IMP_LE] \\
           ‘C = abs C’ by rw [abs] \\
           POP_ASSUM (rw o wrap o SYM) \\
           Know ‘f' i ≤ C’
-          >- (rw [Abbr ‘C’] \\
-              irule REAL_SUP_UBOUND_LE' \\
-              CONJ_ASM2_TAC
-              (*  ∃z. ∀x. x ∈ IMAGE f' (count1 n') ⇒ x ≤ z  *)
-              >- (Q.EXISTS_TAC ‘sup (IMAGE f' (count1 n'))’ \\
-                  (* ∀x. x ∈ IMAGE f' (count1 n') ⇒ x ≤ sup (IMAGE f' (count1 n')) *)
-                  (******  le_sup_imp' *******)
-
-                  GEN_TAC \\
-                  MP_TAC (Q.SPEC ‘IMAGE f' (count1 n')’ REAL_SUP_UBOUND_LE') \\
-                  rw [] \\
-                    cheat) \\
+          >- (‘i ≤ n'’ by  fs [count1_def] \\
+              Q.PAT_X_ASSUM ‘∀n. n ≤ n' ⇒ f' n ≤ C’ (MP_TAC o (Q.SPEC ‘i’)) \\
+              METIS_TAC [] \\
               simp []) \\
           DISCH_TAC \\
           Cases_on ‘abs (g i x) = 0’
@@ -662,7 +647,6 @@ Proof
       METIS_TAC [REAL_LE_TRANS])
   >> simp []
 QED
-*)
 
 Theorem partial_sum_telescoping:
   ∀(X: num -> 'a -> real) Y (n:num) (j:num) x.
@@ -1510,6 +1494,13 @@ Definition higher_differentiable_def:
   higher_differentiable 0 f x ⇔ T ∧
   (∀n. higher_differentiable (SUC n) f x ⇔ higher_differentiable n f x ∧ ∃l. (diff n f diffl l) x)
 End
+
+Theorem higher_differentiable_diff:
+  ∀f (n: num) x. higher_differentiable n f x ⇒ ∃l. (diff n f diffl l) x
+Proof
+  Induct_on `n` >> rw [higher_differentiable_def, diff_def]
+  >> METIS_TAC []
+QED
 *)
 
 Theorem in_borel_measurable_diff:
@@ -1756,7 +1747,7 @@ Theorem normal_absolute_third_moment:
 Proof
   cheat
 QED
-
+(*
 Theorem clt_tactic1:
   ∀p X Y N s b. prob_space p ∧
                 (∀i. real_random_variable (X i) p) ∧
@@ -1840,6 +1831,20 @@ Proof
   >- (METIS_TAC[])
   >> METIS_TAC []
 QED
+
+Theorem converge_in_dist_third_alt':
+  !p X Y. prob_space p /\
+          (!n. real_random_variable (X n) p) /\ real_random_variable Y p ==>
+          ((X --> Y) (in_distribution p) <=>
+           (∀(i :num). i IN {0; 1; 2; 3} ⇒ bounded (IMAGE (diff i) 𝕌(:real))) ∧
+           (∀(i :num). i IN {0; 1; 2; 3} ⇒ (diff i) continuous_on 𝕌(:real)) ⇒
+           ((\n. expectation p (Normal o f o real o (X n))) -->
+           expectation p (Normal o f o real o Y)) sequentially)
+Proof
+  cheat
+QED
+*)
+
 
 (*
 Theorem clt_tactic2:
@@ -1969,7 +1974,7 @@ Proof
 QED
 
 Theorem real_random_variable_exp_normal:
-    ∀p X r. prob_space p ∧ real_random_variable X p ⇒
+    ∀p X r s. prob_space p ∧ real_random_variable X p ⇒
             real_random_variable (λx. exp (Normal s * X x)) p
 Proof
     rw [real_random_variable_cmul, real_random_variable_exp]
