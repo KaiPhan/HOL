@@ -1455,26 +1455,6 @@ Proof
  >> cheat
 QED
 
-(*
- >> (MP_TAC o (Q.SPECL [‘p’, ‘Y’, ‘X’, ‘borel’, ‘borel’,
-                        ‘λ(x :α). ((diff :num -> real -> real) n (Y x))’,
-                        ‘λx. X x pow n’]) o
-              (INST_TYPE [beta |-> ``:real``])) indep_rv_cong
- >> simp [o_DEF]
- >> Know ‘diff n ∈ borel_measurable borel’
- >- (cheat)
- >> DISCH_TAC
- >> Know ‘(λx. x pow n) ∈ borel_measurable borel’
-    >- (irule in_borel_measurable_pow \\
-        simp [sigma_algebra_borel] \\
-        qexistsl_tac [‘λx. f x’, ‘n’] \\
-        simp [in_borel_measurable_continuous_on]
-    cheat)
- >> DISCH_TAC
- >> FULL_SIMP_TAC std_ss []
-QED
-*)
-
 Definition diff_def :
     (diff 0       f x = f x) /\
     (diff (SUC m) f x = @y. ((diff m f) diffl y)(x))
@@ -1747,7 +1727,7 @@ Theorem normal_absolute_third_moment:
 Proof
   cheat
 QED
-(*
+
 Theorem clt_tactic1:
   ∀p X Y N s b. prob_space p ∧
                 (∀i. real_random_variable (X i) p) ∧
@@ -1779,14 +1759,13 @@ Proof
                second_moment_pos) \\
       simp[] \\
       DISCH_TAC)
-
-      >> DISCH_TAC
+  >> DISCH_TAC
   >> ‘∀n. 0 < s n’ by rw[lt_le]
   >> ‘∀n. inv(s n) ≠ NegInf ∧ inv(s n) ≠ PosInf’ by METIS_TAC[inv_not_infty]
   >> ‘∃r. Normal r = inv(s i)’ by METIS_TAC[extreal_cases]
-
   >> Q.ABBREV_TAC ‘D = λx. ∑ (λi. X i x) (count1 i)’
   >> ‘∀x. D x = ∑ (λi. X i x) (count1 i)’ by rw[Abbr ‘D’]
+
   >> Know ‘∀x. D x ≠ NegInf’
   >- (rw[Abbr ‘D’] \\
       MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_NEGINF \\
@@ -1797,10 +1776,11 @@ Proof
                            random_variable (X i') p Borel ∧
                            ∀x. x ∈ p_space p ⇒ X i' x ≠ −∞ ∧ X i' x ≠ +∞’
       (MP_TAC o Q.SPEC ‘x'’) \\
-       STRIP_TAC \\
-       POP_ASSUM (MP_TAC o Q.SPEC ‘x’) \\
-       STRIP_TAC \\
-       cheat)
+      STRIP_TAC \\
+      POP_ASSUM (MP_TAC o Q.SPEC ‘x’) \\
+      STRIP_TAC \\
+
+     cheat)
   >> DISCH_TAC
   >> Know ‘∀x. D x ≠ PosInf’
   >- (rw[Abbr ‘D’] \\
@@ -1822,7 +1802,6 @@ Proof
   >> MP_TAC (Q.SPECL [‘p’, ‘λx. inv(s i) * ∑ (λi. X i x) (count1 i)’,
                            ‘λx. Normal r * ∑ (λi. X i x) (count1 i)’]
               real_random_variable_cong)
-
   >> impl_tac
   >- (PROVE_TAC [])
   >> MP_TAC (Q.SPECL [‘p’, ‘λx. inv(s i) * ∑ (λi. X i x) (count1 i)’,
@@ -1833,35 +1812,17 @@ Proof
   >> METIS_TAC []
 QED
 
-Theorem converge_in_dist_third_alt':
-  !p X Y. prob_space p /\
-          (!n. real_random_variable (X n) p) /\ real_random_variable Y p ==>
-          ((X --> Y) (in_distribution p) <=>
-           (∀(i :num). i IN {0; 1; 2; 3} ⇒ bounded (IMAGE (diff i) 𝕌(:real))) ∧
-           (∀(i :num). i IN {0; 1; 2; 3} ⇒ (diff i) continuous_on 𝕌(:real)) ⇒
-           ((\n. expectation p (Normal o f o real o (X n))) -->
-           expectation p (Normal o f o real o Y)) sequentially)
-Proof
-  cheat
-QED
-*)
-
-
 (*
-Theorem clt_tactic2:
-  ∀p X Y.
-          prob_space p ∧ (∀n. real_random_variable (X n) p) ∧
-          real_random_variable Y p ⇒
-          ∀f (diff :num -> real -> real).
-              diff 0 = f ∧
-              (∀(i :num). i IN {0; 1; 2; 3} ⇒ bounded (IMAGE (diff i) 𝕌(:real))) ∧
-              (∀(i :num). i IN {0; 1; 2; 3} ⇒ (diff i) continuous_on 𝕌(:real)) ⇒
-              ((λn. expectation p (Normal ∘ f ∘ real ∘ X n)) ⟶
-                    expectation p (Normal ∘ f ∘ real ∘ Y)) sequentially
+Theorem converge_in_dist_third_alt':
+    !p X Y. prob_space p /\
+            (!n. real_random_variable (X n) p) /\ real_random_variable Y p ==>
+            ((X --> Y) (in_distribution p) <=>
+            (∀(i :num). i IN {0; 1; 2; 3} ⇒ bounded (IMAGE (diff i) 𝕌(:real))) ∧
+            (∀(i :num). i IN {0; 1; 2; 3} ⇒ (diff i) continuous_on 𝕌(:real)) ⇒
+            ((\n. expectation p (Normal o f o real o (X n))) -->
+                  expectation p (Normal o f o real o Y)) sequentially)
 Proof
-  rpt STRIP_TAC
-  >> irule converge_in_dist_alt'
-  cheat
+    cheat
 QED
 *)
 
