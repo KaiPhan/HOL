@@ -1779,6 +1779,7 @@ Proof
                second_moment_pos) \\
       simp[] \\
       DISCH_TAC)
+
       >> DISCH_TAC
   >> ‘∀n. 0 < s n’ by rw[lt_le]
   >> ‘∀n. inv(s n) ≠ NegInf ∧ inv(s n) ≠ PosInf’ by METIS_TAC[inv_not_infty]
@@ -1865,11 +1866,24 @@ QED
 *)
 
 Theorem lim_null:
-    ∀f l x.
-           (∃N. ∀n. N ≤ n ⇒ f n ≠ +∞ ∧ f n ≠ −∞) ∧ l ≠ +∞ ∧ l ≠ −∞ ⇒
-           (f --> l) sequentially ⇔ ((λn. (real (f n) − real l)) --> 0) sequentially
+    ∀f l.
+          (∃N. ∀n. N ≤ n ⇒ f n ≠ +∞ ∧ f n ≠ −∞) ∧ l ≠ +∞ ∧ l ≠ −∞ ⇒
+          (f --> l) sequentially ⇔ ((λn. (real (f n) − real l)) --> 0) sequentially
 Proof
-  cheat
+    rw [EQ_IMP_THM]
+ >- ((MP_TAC o (Q.SPECL [‘sequentially’, ‘real o f’, ‘real l’]) o
+     (INST_TYPE [alpha |-> ``:num``])) real_topologyTheory.LIM_NULL \\
+     rw [o_DEF] \\
+     Suff ‘((λx. real (f x)) ⟶ real l) sequentially’
+     >- (fs []) \\
+     cheat)
+
+ >> (MP_TAC o (Q.SPECL [‘sequentially’, ‘real o f’, ‘real l’]) o
+              (INST_TYPE [alpha |-> ``:num``])) real_topologyTheory.LIM_NULL
+ >> rw [o_DEF]
+
+ >> ‘∃a. l = Normal a’ by METIS_TAC [extreal_cases]
+ >> cheat
 QED
 
 (*
