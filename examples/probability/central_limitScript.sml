@@ -22,10 +22,10 @@ val _ = intLib.deprecate_int();
 val _ = ratLib.deprecate_rat();
 
 (* ------------------------------------------------------------------------- *)
-(*  Liapunov inequality                                                      *)
+(*  Lyapunov inequality                                                      *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem liapounov_ineq_lemma:
+Theorem lyapunov_ineq_lemma:
     !m u p. measure_space m ∧
             measure m (m_space m) < PosInf ∧
             1 < p ∧ p < PosInf ∧
@@ -102,7 +102,7 @@ Proof
  >> DISCH_TAC >> METIS_TAC []
 QED
 
-Theorem liapounov_ineq:
+Theorem lyapunov_ineq:
     !m u r r'. measure_space m /\ u IN lp_space r m ∧  u IN lp_space r' m ∧
                measure m (m_space m) < PosInf ∧
                0 < r ∧
@@ -129,7 +129,7 @@ Proof
      ‘r / r = 1’ by METIS_TAC [div_refl_pos] >> METIS_TAC []) >> DISCH_TAC
  >> ‘0 < r' * inv(r)’ by METIS_TAC [lt_01, lt_trans]
  >> MP_TAC (Q.SPECL [‘m’, ‘λx. abs (u x) powr r’, ‘r'* inv(r)’]
-            liapounov_ineq_lemma) >> impl_tac >> simp[]
+            lyapunov_ineq_lemma) >> impl_tac >> simp[]
  >- (CONJ_TAC
      >- (‘∃a. r' * inv(r) = Normal a’ by METIS_TAC [extreal_cases] >> rw[lt_infty]) \\
      gs [lp_space_alt_finite] >> CONJ_TAC
@@ -212,7 +212,7 @@ Proof
  >> DISCH_TAC >> FULL_SIMP_TAC std_ss[]
 QED
 
-Theorem liapounov_ineq_rv:
+Theorem lyapunov_ineq_rv:
     !p u r r'. prob_space p /\ u IN lp_space r p ∧  u IN lp_space r' p ∧
                0 < r ∧
                r < r' ∧
@@ -221,7 +221,7 @@ Theorem liapounov_ineq_rv:
 Proof
     rpt STRIP_TAC
  >> FULL_SIMP_TAC std_ss [prob_space_def]
- >> MP_TAC (Q.SPECL [‘p’, ‘u’, ‘r’, ‘r'’] liapounov_ineq)
+ >> MP_TAC (Q.SPECL [‘p’, ‘u’, ‘r’, ‘r'’] lyapunov_ineq)
  >> impl_tac >> simp []
  >> DISCH_TAC
  >> Know ‘0 < r⁻¹ − r'⁻¹’
@@ -1851,7 +1851,7 @@ Proof
   (* applying has_integral_x_cubic_std_normal_density *)
  >> Know ‘!n. (h n has_integral (2 * std_normal_density 0 − ((&n) pow 2 + 2) * std_normal_density (&n)))
                UNIV’
- >- (rw [Abbr ‘h’, HAS_INTEGRAL_MUL_INDICATOR] \\
+ >- (rw [Abbr ‘h’, integrationTheory.HAS_INTEGRAL_MUL_INDICATOR] \\
      simp [Abbr ‘f’] \\
      Know ‘∀x. x IN interval [(0,&n)] ⇒
                (abs x)³ * std_normal_density x = x³ * std_normal_density x’
@@ -2239,7 +2239,7 @@ Proof
  >- (fs [lp_space_def])
  >> STRIP_TAC
  >> rw [abs_pos, powr_1]
- >> MP_TAC (Q.SPECL [‘m’, ‘f’, ‘p’] liapounov_ineq_lemma)
+ >> MP_TAC (Q.SPECL [‘m’, ‘f’, ‘p’] lyapunov_ineq_lemma)
  >> simp [lt_le]
  >> STRIP_TAC
  >> Know ‘seminorm p m f ≠ +∞’
@@ -5687,7 +5687,7 @@ Proof
 QED
 
 (*eq 18*)
-Theorem clt_liapounov_upper_bound[local] :
+Theorem clt_lyapunov_upper_bound[local] :
   ∀p X Y. prob_space p ∧
           real_random_variable X p ∧
           expectation p (λx. (abs (X x))³) < +∞ ∧
@@ -5702,7 +5702,7 @@ Proof
   >> DISCH_TAC
   >> MP_TAC (Q.SPECL [‘p’, ‘X’] clt_integrable_lemma)
   >> simp [] >> STRIP_TAC
-  >> MP_TAC (Q.SPECL [‘p’, ‘X’, ‘2’, ‘3’] liapounov_ineq_rv)
+  >> MP_TAC (Q.SPECL [‘p’, ‘X’, ‘2’, ‘3’] lyapunov_ineq_rv)
   >> impl_tac
   >- (fs [real_random_variable, p_space_def, events_def, prob_space_def] \\
       ‘2 < (3 :num)’ by EVAL_TAC >> POP_ASSUM (simp o wrap) \\
@@ -6826,7 +6826,7 @@ Definition converge_in_dist_alt_C3 :
                  expectation p (Normal o f o real o Y)) sequentially
 End
 
-Theorem central_limit_theorem :
+Theorem central_limit_theorem_lyapunov :
     ∀p X N.
       prob_space p ∧
       ext_normal_rv N p 0 1 ∧
@@ -6898,12 +6898,10 @@ Proof
  >- (simp [Abbr ‘Q’] \\
      MATCH_MP_TAC clt_expectation_sum_not_infty_normal_rv \\
      rw [ext_normal_rv_def]) >> DISCH_TAC
-
  >> Know ‘∀n. 0 ≤ n ⇒ M n ≠ +∞ ∧ M n ≠ −∞’
  >- (Q.UNABBREV_TAC ‘M’ >> BETA_TAC \\
      MP_TAC (Q.SPECL [‘p’, ‘X’, ‘s’, ‘R’, ‘f’] clt_expectation_sum_not_infty1) \\
      simp []) >> DISCH_TAC
-
  >> Suff ‘((λx. M x - Q) --> 0) sequentially’
  >- (MP_TAC (Q.SPECL [‘M’, ‘Q’] lim_null) \\
      simp [] >> DISCH_THEN (fs o wrap) \\
@@ -6913,8 +6911,7 @@ Proof
  >> fs [LIM_SEQUENTIALLY]
  >> Q.PAT_X_ASSUM ‘((λx. M x − Q) ⟶ 0) sequentially ⇔ _’ K_TAC
  (*To rewrite b n / s n pow 3 *)
-    >> MP_TAC (Q.SPECL [‘λn. b (SUC n) / (s (SUC n))³’, ‘0’] lim_null_equiv_extreal_real)
-
+ >> MP_TAC (Q.SPECL [‘λn. b (SUC n) / (s (SUC n))³’, ‘0’] lim_null_equiv_extreal_real)
  >> impl_tac >> simp []
  >- (qexists ‘1’ >> gs [] \\
      Q.X_GEN_TAC ‘z’ >> STRIP_TAC \\
@@ -6926,8 +6923,7 @@ Proof
          MP_TAC (Q.SPECL [‘3’, ‘s ((SUC z) :num)’] pow_zero_imp) >> STRIP_TAC \\
          Q.PAT_X_ASSUM ‘∀n. 0 < s (SUC n)’ (STRIP_ASSUME_TAC o Q.SPEC ‘z’) >> fs [lt_imp_ne]) \\
      bn_not_infty_tactic)
-    >> STRIP_TAC
-
+ >> STRIP_TAC
  >> fs [LIM_SEQUENTIALLY, metricTheory.dist] >> rw []
  >> Q.ABBREV_TAC ‘(A :extreal) = sup (IMAGE (λt. abs (Normal (diffn 3 f t))) UNIV)’
  >> ‘A ≠ PosInf’ by METIS_TAC [clt_sup_finite]
@@ -6940,17 +6936,15 @@ Proof
  >> Q.ABBREV_TAC ‘fu = λx. Normal ((abs x)³ * std_normal_density x)’
  >> ‘0 < ∫ lborel fu’ by rw [Abbr ‘fu’, standard_normal_abs_third_moment_pos]
  >> ‘∃c0. ∫ lborel fu = Normal c0’ by METIS_TAC [integrable_normal_integral] >> gs []
-    >> Q.ABBREV_TAC ‘U = m / 6 * (1 + c0)’
-
+ >> Q.ABBREV_TAC ‘U = m / 6 * (1 + c0)’
  >> Cases_on ‘m = 0’
-    >- (‘U = 0’ by gs [mul_lzero, normal_0, extreal_pow_def] \\
-        clt_tactic3 \\
-        gs [mul_lzero, normal_0, extreal_pow_def] \\
-        ‘0 < Normal 6’ by EVAL_TAC \\
-        ‘0 < Normal (c pow 3)’ by METIS_TAC [GSYM extreal_lt_eq, normal_0, pow_pos_lt, extreal_pow_def] \\
-        ‘0 < (Normal 6 * Normal c³)’ by METIS_TAC [lt_mul] \\
-        ‘(6 :extreal) = Normal (6 :real)’ by EVAL_TAC >> gs [lt_imp_ne, zero_div, mul_lzero])
-
+ >- (‘U = 0’ by gs [mul_lzero, normal_0, extreal_pow_def] \\
+     clt_tactic3 \\
+     gs [mul_lzero, normal_0, extreal_pow_def] \\
+     ‘0 < Normal 6’ by EVAL_TAC \\
+     ‘0 < Normal (c pow 3)’ by METIS_TAC [GSYM extreal_lt_eq, normal_0, pow_pos_lt, extreal_pow_def] \\
+     ‘0 < (Normal 6 * Normal c³)’ by METIS_TAC [lt_mul] \\
+     ‘(6 :extreal) = Normal (6 :real)’ by EVAL_TAC >> gs [lt_imp_ne, zero_div, mul_lzero])
  >> Know ‘0 < U’
  >- (rw [Abbr ‘U’] \\
      MATCH_MP_TAC REAL_LT_MUL >> rw []
@@ -6962,8 +6956,7 @@ Proof
      (STRIP_ASSUME_TAC o Q.SPEC ‘e / U’) >> gs []
  >> ‘0 < (2 :real)’ by simp []
  >> ‘0 < e / 2’ by METIS_TAC [REAL_LT_DIV]
-    >> clt_tactic3
-
+ >> clt_tactic3
  >> Know ‘∀i. i < (SUC n) ⇒ integrable r (λx. (Y' i x)³)’
  >- (rw [Abbr ‘Y'’] \\
      MP_TAC (Q.SPECL [‘p’, ‘p'’, ‘λx. (Y (i :num) x)³’]
@@ -6982,7 +6975,6 @@ Proof
      >> MATCH_MP_TAC (cj 1 expectation_finite) >> simp [GSYM o_DEF, GSYM pow_abs] \\
      MATCH_MP_TAC integrable_abs \\
      fs [prob_space_def, o_DEF]) >> DISCH_TAC
-
  >> Know ‘∀i. i < (SUC n) ⇒ expectation r (λx. (abs (X' i x))) ≠ NegInf ∧
                       expectation r (λx. (abs (Y' i x))) ≠ NegInf ∧
                       expectation r (λx. (abs (X' i x)) pow 3) ≠ NegInf ∧
@@ -6991,11 +6983,7 @@ Proof
      >> MATCH_MP_TAC (cj 2 expectation_finite) >> simp [GSYM o_DEF, GSYM pow_abs] \\
      MATCH_MP_TAC integrable_abs \\
      fs [prob_space_def, o_DEF]) >> DISCH_TAC
-
-
-
-
-    >> Know ‘Normal m / (6 * (Normal c)³) *
+ >> Know ‘Normal m / (6 * (Normal c)³) *
              ∑ (λj. expectation r (λx. (abs (X' j x))³ + (abs (Y' j x))³)) (count (SUC n)) =
           Normal m / 6 *
           SIGMA (λj. expectation r (λx. (abs (X' j x)) pow 3) / (Normal c) pow 3 +
@@ -7011,10 +6999,8 @@ Proof
          irule EXTREAL_SUM_IMAGE_NOT_NEGINF >> rw [] \\
          MATCH_MP_TAC (cj 2 expectation_finite) >> simp [] \\
          clt_tactic2) >> DISCH_TAC \\
-
      ‘∃d. B = Normal d’ by METIS_TAC [extreal_cases] >> gs [extreal_mul_eq] \\
      ‘0 < (Normal c) pow 3’ by METIS_TAC [GSYM extreal_lt_eq, normal_0, pow_pos_lt] \\
-
      Know ‘Normal m / (Normal 6 * (Normal c)³) * Normal d =
            Normal m / Normal 6 * Normal d / (Normal c) pow 3’
      >- (‘0 < Normal 6’ by EVAL_TAC \\
@@ -7026,14 +7012,12 @@ Proof
          ‘Normal (c pow 3) ≠ 0’ by METIS_TAC [GSYM extreal_lt_eq, normal_0, lt_imp_ne] \\
          ASM_SIMP_TAC std_ss [inv_mul, lt_imp_ne, mul_assoc] \\
          simp [GSYM mul_assoc, mul_linv_pos]) >> Rewr \\
-
      ‘0 ≠ (6 :real)’ by EVAL_TAC \\
      ASM_SIMP_TAC std_ss [extreal_div_eq, mul_div_assoc, extreal_not_infty, pow_not_infty] \\
      simp [mul_lcancel] \\
      Q.PAT_X_ASSUM ‘B = Normal d’ (rw o wrap o SYM) \\
      rw [Abbr ‘B’, extreal_pow_def] \\
      Q.ABBREV_TAC ‘h = λj. expectation r (λx. (abs (X' j x))³ + (abs (Y' j x))³)’ \\
-
      Know ‘∑ h (count (SUC n)) / (Normal (c pow 3)) = ∑ (λx. h x / (Normal (c pow 3))) (count (SUC n))’
      >- (irule (GSYM EXTREAL_SUM_IMAGE_CDIV) \\
          fs [REAL_POW_LT, REAL_LT_IMP_NE] \\
@@ -7043,7 +7027,6 @@ Proof
      rw [Abbr ‘h’] \\
      irule EXTREAL_SUM_IMAGE_EQ >> fs [] \\
      rpt (Q.PAT_X_ASSUM ‘T’ K_TAC) \\
-
      CONJ_TAC
      >- (rw [] \\
          Suff ‘expectation r (λx'. (abs (X' x x'))³ + (abs (Y' x x'))³) =
@@ -7065,7 +7048,6 @@ Proof
         ‘∃a. expectation r (λx'. (abs (X' x x'))³ + (abs (Y' x x'))³) = Normal a’ by METIS_TAC [extreal_cases] \\
         gs [extreal_div_eq, extreal_not_infty]) \\
      irule (cj 2 add_not_infty) \\
-
      Q.PAT_X_ASSUM ‘∀i. i < (SUC n) ⇒ expectation r (λx. abs (X' i x)) ≠ +∞ ∧ _’
       (STRIP_ASSUME_TAC o Q.SPEC ‘x’) \\
      Q.PAT_X_ASSUM ‘∀i. i < (SUC n) ⇒ expectation r (λx. abs (X' i x)) ≠  −∞ ∧ _’
@@ -7076,15 +7058,7 @@ Proof
  >> Rewr
  >> Q.ABBREV_TAC ‘A = λj. expectation r (λx. (abs (X' j x))³)’
  >> Q.ABBREV_TAC ‘B = λj. expectation r (λx. (abs (Y' j x))³)’
-    >> gs []
-
-
-
-
-
-
-
-
+ >> gs []
  >> Know ‘∀i. i < (SUC n) ⇒ ext_normal_rv (Y' i) r 0 (sig i)’
  >- (rw [Abbr ‘Y'’, Abbr ‘r’] \\
      MATCH_MP_TAC ext_normal_rv_snd >> fs [])
@@ -7102,7 +7076,6 @@ Proof
                   ‘∃a. X i x = Normal a’ by METIS_TAC [extreal_cases] \\
                   METIS_TAC [extreal_abs_def, extreal_pow_def, extreal_not_infty]) \\
      rw [o_DEF]) >> rw []
-
  >> Know ‘∀i. i < (SUC n) ⇒ B i = expectation p' (λx. (abs (Y i x)) pow 3)’
  >- (rw [Abbr ‘B’, Abbr ‘r’, Abbr ‘Y'’] \\
      MP_TAC (Q.SPECL [‘p’, ‘p'’, ‘λx. (abs (Y (i :num) x)) pow 3’]
@@ -7115,7 +7088,6 @@ Proof
                   ‘∃a. Y i x = Normal a’ by METIS_TAC [extreal_cases] \\
                    METIS_TAC [extreal_abs_def, extreal_pow_def, extreal_not_infty]) \\
      rw [o_DEF]) >> rw []
-
  >> Know ‘Normal m / 6 *
           ∑ (λj. expectation p (λx. (abs (X j x))³) / (Normal c)³ +
                  B j / (Normal c)³) (count (SUC n)) =
@@ -7149,13 +7121,7 @@ Proof
      rw [Abbr ‘L’, Abbr ‘B’]
      >- (irule EXTREAL_SUM_IMAGE_NOT_POSINF >> gs [add_not_infty]) \\
      irule EXTREAL_SUM_IMAGE_NOT_NEGINF >> gs [add_not_infty])
-    >> Rewr
-
-
-
-
-
-
+ >> Rewr
  >> MATCH_MP_TAC let_trans
  >> qexists ‘Normal U * (b (SUC n) / (s (SUC n)) pow 3)’
  >> reverse CONJ_TAC
@@ -7178,15 +7144,12 @@ Proof
      fs [nonzerop_def] \\
      MATCH_MP_TAC REAL_LET_TRANS \\
      qexists ‘U * abs (real (b (SUC n) / (Normal c)³))’ >> gs [ABS_LE])
-
-
  >> Know ‘∀i. i < (SUC n) ⇒ B i = Normal c0 * (Normal ((sig i) pow 3))’
  >- (rw [] >> gs [] \\
      MP_TAC (Q.SPECL [‘p'’, ‘Y (i :num)’, ‘sig (i :num)’]
               (INST_TYPE [“:'a” |-> “:'a list”] ext_normal_rv_abs_third_moment')) \\
      rw [mul_comm])
-    >> DISCH_TAC
-
+ >> DISCH_TAC
  >> Know ‘∀i. i < (SUC n) ⇒ B i ≤ Normal c0 * A i’
  >- (rw [] \\
      HO_MATCH_MP_TAC le_lmul_imp >> gs [REAL_LT_IMP_LE] \\
@@ -7220,7 +7183,6 @@ Proof
      ‘expectation p (λx. (abs (X i x))²) powr (3 * 2⁻¹) = expectation p (λx. (u x) pow 2) powr (3 * 2⁻¹)’
        by rw [Abbr ‘u’] >> POP_ORW \\
      simp [] \\
-
      Know ‘u IN lp_space 2 p’
      >- (simp [Abbr ‘u’, lp_space_def, GSYM o_DEF] \\
          CONJ_TAC >- (irule IN_MEASURABLE_BOREL_ABS' \\
@@ -7247,7 +7209,6 @@ Proof
              METIS_TAC [ETA_AX]) \\
          rw [o_DEF, pow_abs]) \\
      DISCH_TAC \\
-
      Know ‘u IN lp_space 3 p’
      >- (simp [Abbr ‘u’, lp_space_def, GSYM o_DEF] \\
          CONJ_TAC >- (irule IN_MEASURABLE_BOREL_ABS' \\
@@ -7276,8 +7237,7 @@ Proof
          MP_TAC (Q.SPECL [‘p’, ‘λx. (X (i :num) x) pow 3’] (INST_TYPE [“:'b” |-> “:'a”] integrable_abs)) \\
          fs [prob_space_def, o_DEF, pow_abs]) \\
      DISCH_TAC \\
-
-     MP_TAC (Q.SPECL [‘p’, ‘u’, ‘2’, ‘3’] liapounov_ineq_rv) >> rw [seminorm_def, expectation_def] \\
+     MP_TAC (Q.SPECL [‘p’, ‘u’, ‘2’, ‘3’] lyapunov_ineq_rv) >> rw [seminorm_def, expectation_def] \\
      fs [integral_abs_pos_fn, prob_space_def, GSYM o_DEF, GSYM pow_abs] \\
      ‘∀x. abs (u x) = u x’ by rw [Abbr ‘u’, abs_abs] >> gs [] \\
      POP_ORW \\
@@ -7316,9 +7276,7 @@ Proof
          rw [mul_assoc, mul_linv_pos]) \\
      Rewr)
  >> DISCH_TAC
-    >> ‘0 ≤ c0’ by rw [REAL_LT_IMP_LE]
-
-
+ >> ‘0 ≤ c0’ by rw [REAL_LT_IMP_LE]
  >> Know ‘∑ (λj. A j + B j) (count (SUC n)) ≤ (1 + Normal c0) * ∑ A (count (SUC n))’
  >- (simp [extreal_add_eq, GSYM normal_1] \\
      MP_TAC (Q.SPEC ‘count (SUC (n :num))’ (INST_TYPE [“:'a” |-> “:num”] EXTREAL_SUM_IMAGE_CMUL)) \\
@@ -7333,14 +7291,12 @@ Proof
                   Rewr' >> rw [add_rdistrib, mul_lone, le_01] \\
                   METIS_TAC [GSYM le_ladd_imp]) \\
      DISJ2_TAC >> rw [add_not_infty, mul_not_infty2, extreal_not_infty])
-    >> rw []
-
+ >> rw []
  >> Know ‘∑ A (count (SUC n)) = b (SUC n)’
  >- (rw [Abbr ‘A’,Abbr ‘b’, absolute_third_moments_def, absolute_third_moment_def, absolute_moment_def] \\
         irule EXTREAL_SUM_IMAGE_EQ' >> rw [])
  >> rw [] >> gs [Abbr ‘U’] >> gs []
-    >> POP_ORW
-
+ >> POP_ORW
  >> MP_TAC (Q.SPECL [‘∑ (λj. expectation p (λx. (abs (X j x))³) + B j) (count (SUC n))’,
                     ‘(1 + Normal c0) * b (SUC (n :num))’, ‘Normal m / (6 * Normal c³)’] le_lmul_imp)
  >> impl_tac
@@ -7351,8 +7307,7 @@ Proof
      ‘(6 :extreal) = Normal (6 :real)’ by EVAL_TAC \\
      POP_ORW >> rw [extreal_mul_eq] \\
      MATCH_MP_TAC le_div >> gs [])
-    >> DISCH_TAC
-
+ >> DISCH_TAC
  >> Know ‘Normal (1 / 6 * (m * (1 + c0))) * (b (SUC n) / (Normal c)³) =
           Normal m / (6 * Normal c³) * ((1 + Normal c0) * b (SUC n))’
  >- (rw [extreal_pow_def] \\
@@ -7381,6 +7336,48 @@ Proof
      METIS_TAC [mul_comm, mul_assoc])
  >> rw []
 QED
+
+Theorem second_moments_zero_mean :
+    ∀p X n.
+      prob_space p ∧
+      (∀i. expectation p (X i) = 0) ∧
+      (∀i. real_random_variable (X i) p) ⇒
+      second_moments p X n = SIGMA (λi. expectation p (λx. (X i x) pow 2)) (count n)
+Proof
+  rw [second_moments_def, GSYM variance_def, variance_alt]
+QED
+
+Definition lindeberg_term_def :
+    lindeberg_term p X n eps =
+    (1 / second_moments p X n) *
+    SIGMA (λi. expectation p
+                   (λx. (X i x) pow 2 *
+                        indicator_fn {x |  eps * sqrt (second_moments p X n) <= abs (X i x)} x))
+          (count n)
+End
+
+Theorem central_limit_theorem_lindeberg :
+    ∀p X N.
+      prob_space p ∧
+      ext_normal_rv N p 0 1 ∧
+      (∀i. real_random_variable (X i) p) ∧
+      (∀n. indep_vars p X (λi. Borel) (count n)) ∧
+      (∀i. expectation p (X i) = 0) ∧
+      (∀i. variance p (X i) < PosInf) ∧
+      (∀i. variance p (X i) ≠ 0) ∧
+      (∀eps. 0 < eps ⇒
+             ((λn. lindeberg_term p X (SUC n) eps) --> 0) sequentially) ⇒
+      converge_in_dist p
+                       (λn x.
+                          SIGMA (λi. X i x) (count (SUC n)) /
+                                sqrt (second_moments p X (SUC n))) N
+Proof
+  rpt STRIP_TAC
+  >> cheat
+QED
+
+
+
 
 (*---------------------------------------------------------------------------*
  * Write the theory to disk.                                                 *
