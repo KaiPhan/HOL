@@ -1851,7 +1851,7 @@ Proof
   (* applying has_integral_x_cubic_std_normal_density *)
  >> Know ‘!n. (h n has_integral (2 * std_normal_density 0 − ((&n) pow 2 + 2) * std_normal_density (&n)))
                UNIV’
- >- (rw [Abbr ‘h’, integrationTheory.HAS_INTEGRAL_MUL_INDICATOR] \\
+ >- (rw [Abbr ‘h’, HAS_INTEGRAL_MUL_INDICATOR] \\
      simp [Abbr ‘f’] \\
      Know ‘∀x. x IN interval [(0,&n)] ⇒
                (abs x)³ * std_normal_density x = x³ * std_normal_density x’
@@ -7372,7 +7372,53 @@ Theorem central_limit_theorem_lindeberg :
                           SIGMA (λi. X i x) (count (SUC n)) /
                                 sqrt (second_moments p X (SUC n))) N
 Proof
-  cheat
+
+    rpt STRIP_TAC
+    >> Q.ABBREV_TAC ‘s = λn. sqrt (second_moments p X n)’ >> fs []
+    >> Know ‘∀n. 0 < s (SUC n)’
+    >- (rw [Abbr ‘s’] \\
+        MATCH_MP_TAC sqrt_pos_lt >> rw [second_moments_def] \\
+        MATCH_MP_TAC EXTREAL_SUM_IMAGE_SPOS >> rw [GSYM variance_def] \\
+        MP_TAC (Q.SPECL [‘p’, ‘X (x :num)’] variance_pos) >>  rw [lt_le])
+    >> DISCH_TAC
+    >> Know ‘∀n. s n ≠ NegInf ∧ s n ≠ PosInf’
+    >- (simp [Abbr ‘s’] \\
+        qx_gen_tac ‘n’ \\
+        CONJ_TAC >- (Suff ‘0 ≤ sqrt (second_moments p X n)’
+                     >- (STRIP_TAC >> METIS_TAC [extreal_0_simps, lt_trans]) \\
+                     MATCH_MP_TAC sqrt_pos_le >> rw [second_moments_variance_def] \\
+                     irule EXTREAL_SUM_IMAGE_POS >> simp [variance_pos]) \\
+        irule sqrt_infty \\
+        CONJ_TAC >- (Suff ‘second_moments p X n < +∞’
+                     >- (METIS_TAC [lt_imp_ne]) \\
+                     irule finite_variance_imp_second_moments >> simp []) \\
+        METIS_TAC [second_moments_pos])
+    >> DISCH_TAC
+    >> Q.ABBREV_TAC ‘R = λn x. ∑ (λi. X i x) (count (SUC n)) / s (SUC n)’
+    >> ‘∀i. finite_second_moments p (X i)’ by METIS_TAC [GSYM finite_second_moments_eq_finite_variance, extreal_0_simps]
+    >> ‘∀i. integrable p (X i)’ by METIS_TAC [finite_second_moments_imp_integrable]
+    >> Know ‘∀i. real_random_variable (R i) p’
+    >- (Q.X_GEN_TAC ‘n’ \\
+        drule real_random_variable_sum_cdiv >> STRIP_TAC \\
+        POP_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [‘X’, ‘s’, ‘SUC n’]) \\
+        gs [] >> fs [Abbr ‘R’])
+    >> DISCH_TAC
+    >> Know ‘∀i. integrable p (R i)’
+    >- (Q.X_GEN_TAC ‘n’ \\
+        drule integrable_sum_cdiv >> STRIP_TAC \\
+        POP_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [‘X’, ‘s’, ‘SUC n’]) \\
+        gs [] >> fs [Abbr ‘R’])
+    >> DISCH_TAC
+    >> rw [converge_in_dist_alt_C3]
+    >> cheat
+
+
+
+
+
+
+
+
 QED
 
 
