@@ -139,7 +139,7 @@ fun poly_compile warn diag quietp file I (deps : dep list) objs = let
                         concatWithf tgt_toString ", " deps ^ "]\n  objs = [" ^
                         String.concatWith ", " objs ^ "]")
   val modName = fromFileNoSuf file
-  val deps = let
+  val deps : hm_target.t list = let
     open Binaryset
     val dep_set0 = addList (empty_tgtset, deps)
     val {deps = extra_deps, ...} =
@@ -151,6 +151,9 @@ fun poly_compile warn diag quietp file I (deps : dep list) objs = let
     listItems dep_set
   end
   val depfiles = map (toFile o tgt_toString) deps
+  val _ = diag (fn _ =>
+    "Depfiles are " ^
+    String.concatWith ", " (map HOLFS_dtype.fileToString depfiles))
   val objfiles = map toFile objs
   fun mapthis (Unhandled _) = NONE
     | mapthis (DAT _) = NONE
@@ -163,8 +166,14 @@ fun poly_compile warn diag quietp file I (deps : dep list) objs = let
             else (fn s => FileSys.output(FileSys.stdOut, s ^ "\n"))
   val _ = say ("HOLMOSMLC -c " ^ fromFile file)
   val filename = tgt_toString (filestr_to_tgt (fromFile file))
-  val _ = diag (fn _ => "Writing target with dependencies: " ^
+  val _ = diag (fn _ => "Compiling " ^ HOLFS_dtype.fileToString file ^
+                        "; writing target with dependencies: " ^
                         String.concatWith ", " depMods)
+  fun uiOfCodeIsDep ct =
+      let val file_ct = UI (HOLFileSys.map_CodeType OS.Path.file ct)
+      in
+        List.exists (fn tgt => filepart tgt = file_ct) deps
+      end
 in
 case file of
   SIG _ =>
@@ -179,7 +188,7 @@ case file of
        finish_compilation warn depMods filename tgt
      end
      handle IO.Io _ => OS.Process.failure)
-| SML _ =>
+| SML ct =>
     (let
       val tgt = modName ^ ".uo"
       val outUo = FileSys.openOut tgt
@@ -188,14 +197,16 @@ case file of
        FileSys.output (outUo, "\n");
        FileSys.output (outUo, usePathVars filename ^ "\n");
        FileSys.closeOut outUo;
-       (if FileSys.access (modName ^ ".sig", []) then
-          ()
-        else
-          let val outUi = FileSys.openOut (modName ^ ".ui")
-          in
-            FileSys.closeOut outUi;
-            ignore (finish_compilation warn depMods filename (modName ^ ".ui"))
-          end);
+       if uiOfCodeIsDep ct then ()
+       else
+         let
+           val _ = diag (fn _ => "Creating empty " ^ modName ^
+                                 ".ui file as it is not a dependency")
+           val outUi = FileSys.openOut (modName ^ ".ui")
+         in
+           FileSys.closeOut outUi;
+           ignore (finish_compilation warn depMods filename (modName ^ ".ui"))
+         end;
        finish_compilation warn depMods filename tgt
      end
      handle IO.Io _ => OS.Process.failure)
@@ -229,6 +240,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   val cmdl_HOLSTATE = #holstate optv
   val jobs = #jobs (#core optv)
   val time_limit = #time_limit optv
+  val maxheap = #maxheap optv
   val chatty = if jobs = 1 then #chatty outs else (fn _ => ())
   val info = if jobs = 1 then #info outs else (fn _ => ())
 
@@ -250,7 +262,8 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   in
     p "#!/bin/sh";
     p ("set -e");
-    p (protect(fullPath [HOLDIR, "bin", "buildheap"]) ^ " --gcthreads=1 " ^
+    (* Poly/ML runtime options (--gcthreads) must come before subcommand *)
+    p (protect(fullPath [HOLDIR, "bin", "hol"]) ^ " --gcthreads=1 run " ^
        (case #holheap extra of NONE => "--poly"
                              | SOME d => "--holstate="^tgt_toString d) ^ " " ^
        (if isSome debug then "--dbg " else "") ^
@@ -302,9 +315,14 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
       let
         fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
         val _ = app safedelete expecteds
-        val useScript = fullPath [HOLDIR, "bin", "buildheap"]
+        val useScript = fullPath [HOLDIR, "bin", "hol"]
+        (* Poly/ML runtime options (--gcthreads, --maxheap) must come before subcommand *)
         val cline =
             useScript::"--gcthreads=1"::
+            (case maxheap of
+                 NONE => []
+               | SOME n => ["--maxheap", Int.toString n]) @
+            ["run"] @
             (case #multithread optv of
                  NONE => []
                | SOME i => ["--mt=" ^ Int.toString i]) @
@@ -483,6 +501,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                                       (fn s => diag "multibuild" (fn _ => s)),
                                     info = #info outs,
                                     time_limit = time_limit,
+                                    maxheap = maxheap,
                                     quiet = quiet_flag, hmenv = hmenv,
                                     jobs = jobs } g |> interpret_graph)
 in

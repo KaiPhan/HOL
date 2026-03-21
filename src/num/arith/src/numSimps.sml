@@ -110,7 +110,7 @@ val arithmetic_rewrites =
       "MIN_LT", "MAX_LT", "MIN_MAX_EQ", "MIN_MAX_LT",
 
       (* mods and divs *)
-      "X_MOD_Y_EQ_X", "DIVMOD_ID", "DIV_1", "MOD_1", "LESS_MOD",
+      "X_MOD_Y_EQ_X", "DIV_1", "MOD_1", "LESS_MOD",
       "ZERO_MOD", "MOD_MOD", "NUMERAL_MULT_EQ_DIV", "MOD_LESS",
       "DIV_LESS",
 
@@ -660,8 +660,10 @@ in
                          "LEQ_CANON_CONV")],
           rewrs = [(SOME {Thy = "arithmetic", Name = "GREATER_DEF"},
                     arithmeticTheory.GREATER_DEF),
-                   (SOME {Thy = "arithmeticTheory", Name = "GREATER_EQ"},
-                    arithmeticTheory.GREATER_EQ)] @
+                   (SOME {Thy = "arithmetic", Name = "GREATER_EQ"},
+                    arithmeticTheory.GREATER_EQ),
+                   (SOME {Thy = "arithmetic", Name = "SUC_MINUS_NUMERAL"},
+                    arithmeticTheory.SUC_MINUS_NUMERAL)] @
                   map (fn (s, th) => (SOME {Name = s, Thy = ""}, th)) [
                     ("LT_SUB", DECIDE “x < y - z <=> x + z < y”),
                     ("SUB_LE", DECIDE “x - y <= z <=> x <= y + z”),

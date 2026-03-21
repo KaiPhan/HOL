@@ -508,200 +508,224 @@ Proof
 QED
 
 Theorem PARTIAL_DIVISION_EXTEND_1:
-   !a b c d:real.
-   interval[c,d] SUBSET interval[a,b] /\ ~(interval[c,d] = {})
-   ==> ?p. p division_of interval[a,b] /\ interval[c,d] IN p
+  !a b c d:real.
+    interval[c,d] SUBSET interval[a,b] /\ ~(interval[c,d] = {})
+   ==>
+    ?p. p division_of interval[a,b] /\ interval[c,d] IN p
 Proof
-  REPEAT STRIP_TAC THEN ASM_CASES_TAC ``interval[a:real,b] = {}`` THENL
+  REPEAT STRIP_TAC THEN ASM_CASES_TAC “interval[a:real,b] = {}” THENL
   [ASM_SET_TAC[], ALL_TAC] THEN
   POP_ASSUM (MP_TAC o REWRITE_RULE [INTERVAL_NE_EMPTY]) THEN
   POP_ASSUM (MP_TAC o REWRITE_RULE [INTERVAL_NE_EMPTY]) THEN
   REPEAT STRIP_TAC THEN
   EXISTS_TAC
-   ``{interval
+   “{interval
     [(@f. f = if 1:num < l then (c:real) else (a:real)):real,
      (@f. f = if 1:num < l then d else if 1:num = l then c else b)] |
       l IN {1..1+1}} UNION
      {interval
     [(@f. f = if 1:num < l then c else if 1:num = l then d else a),
      (@f. f = if 1:num < l then (d:real) else (b:real)):real] |
-      l IN {1..1+1}}`` THEN
-  MATCH_MP_TAC(TAUT `b /\ (b ==> a) ==> a /\ b`) THEN CONJ_TAC THENL
+      l IN {1..1+1}}” THEN
+  MATCH_MP_TAC(TAUT ‘b /\ (b ==> a) ==> a /\ b’) THEN CONJ_TAC THENL
   [REWRITE_TAC[IN_UNION] THEN DISJ1_TAC THEN
-   SIMP_TAC std_ss [GSPECIFICATION] THEN EXISTS_TAC ``1+1:num`` THEN
-  SIMP_TAC std_ss [IN_NUMSEG, LESS_EQ_REFL, ARITH_PROVE ``1 <= n + 1:num``],
+   SIMP_TAC std_ss [GSPECIFICATION] THEN EXISTS_TAC “1+1:num” THEN
+  SIMP_TAC std_ss [IN_NUMSEG, LESS_EQ_REFL, ARITH_PROVE “1 <= n + 1:num”],
   DISCH_TAC] THEN
-  UNDISCH_TAC ``interval [(c,d)] SUBSET interval [(a,b)]`` THEN
+  UNDISCH_TAC “interval [(c,d)] SUBSET interval [(a,b)]” THEN
   GEN_REWR_TAC LAND_CONV [SUBSET_INTERVAL] THEN
-  ASM_REWRITE_TAC[DIVISION_OF] THEN DISCH_TAC THEN REPEAT CONJ_TAC THENL
-  [SIMP_TAC std_ss [GSYM IMAGE_DEF] THEN
-   SIMP_TAC std_ss [FINITE_UNION, IMAGE_FINITE, FINITE_NUMSEG],
-   REWRITE_TAC[IN_UNION, TAUT `a \/ b ==> c <=> (a ==> c) /\ (b ==> c)`] THEN
-   SIMP_TAC std_ss [GSYM IMAGE_DEF, FORALL_AND_THM, FORALL_IN_IMAGE] THEN
-   ASM_SIMP_TAC std_ss [IN_NUMSEG, INTERVAL_NE_EMPTY] THEN
-   CONJ_TAC THEN X_GEN_TAC ``l:num`` THEN DISCH_TAC THEN
-  (CONJ_TAC THENL [ALL_TAC, MESON_TAC[]]) THEN
-   REPEAT STRIP_TAC THEN
-   REPEAT (COND_CASES_TAC THEN ASM_SIMP_TAC std_ss []),
-  SIMP_TAC std_ss [IN_UNION, IMP_CONJ, RIGHT_FORALL_IMP_THM] THEN
-  SIMP_TAC std_ss [SET_RULE
-   ``(!y. y IN {f x | x IN s} \/ y IN {g x | x IN s} ==> P y) <=>
-     (!x. x IN s ==> P(f x) /\ P(g x))``] THEN
-  SIMP_TAC std_ss [GSYM FORALL_AND_THM, IN_NUMSEG] THEN
-  REWRITE_TAC[TAUT `(a ==> b) /\ (a ==> c) <=> a ==> b /\ c`] THEN
-  SIMP_TAC std_ss [GSYM RIGHT_FORALL_IMP_THM] THEN
-  KNOW_TAC ``!l l'. (\l l'.
-  1:num <= l /\ l <= 2:num ==>
-  1:num <= l' /\ l' <= 2:num ==>
-  ((interval
-      [(if 1 < l then c else a,
-        if 1 < l then d else if 1 = l then c else b)] <>
-    interval
-      [(if 1 < l' then c else a,
-        if 1 < l' then d else if 1 = l' then c else b)] ==>
-    (interior
-       (interval
-          [(if 1 < l then c else a,
-            if 1 < l then d else if 1 = l then c else b)]) INTER
-     interior
-       (interval
-          [(if 1 < l' then c else a,
-            if 1 < l' then d else if 1 = l' then c else b)]) =
-     {})) /\
-   (interval
-      [(if 1 < l then c else a,
-        if 1 < l then d else if 1 = l then c else b)] <>
-    interval
-      [(if 1 < l' then c else if 1 = l' then d else a,
-        if 1 < l' then d else b)] ==>
-    (interior
-       (interval
-          [(if 1 < l then c else a,
-            if 1 < l then d else if 1 = l then c else b)]) INTER
-     interior
-       (interval
-          [(if 1 < l' then c else if 1 = l' then d else a,
-            if 1 < l' then d else b)]) =
-     {}))) /\
-  (interval
-     [(if 1 < l then c else if 1 = l then d else a,
-       if 1 < l then d else b)] <>
-   interval
-     [(if 1 < l' then c else a,
-       if 1 < l' then d else if 1 = l' then c else b)] ==>
-   (interior
-      (interval
-         [(if 1 < l then c else if 1 = l then d else a,
-           if 1 < l then d else b)]) INTER
-    interior
-      (interval
-         [(if 1 < l' then c else a,
-           if 1 < l' then d else if 1 = l' then c else b)]) =
-    {})) /\
-  (interval
-     [(if 1 < l then c else if 1 = l then d else a,
-       if 1 < l then d else b)] <>
-   interval
-     [(if 1 < l' then c else if 1 = l' then d else a,
-       if 1 < l' then d else b)] ==>
-   (interior
-      (interval
-         [(if 1 < l then c else if 1 = l then d else a,
-           if 1 < l then d else b)]) INTER
-    interior
-      (interval
-         [(if 1 < l' then c else if 1 = l' then d else a,
-           if 1 < l' then d else b)]) =
-    {}))) l l'`` THENL
-  [ALL_TAC, SIMP_TAC std_ss []] THEN
-  MATCH_MP_TAC WLOG_LE THEN CONJ_TAC THENL
-  [SIMP_TAC std_ss [] THEN REPEAT GEN_TAC THEN
-  ONCE_REWRITE_TAC[TAUT `a ==> b ==> c <=> b ==> a ==> c`] THEN
-  SIMP_TAC std_ss [INTER_ACI, CONJ_ACI] THEN MESON_TAC[],
-  ALL_TAC] THEN
-  MAP_EVERY X_GEN_TAC [``l:num``, ``m:num``] THEN
-  SIMP_TAC std_ss [] THEN
-  DISCH_TAC THEN STRIP_TAC THEN STRIP_TAC THEN
-  ONCE_REWRITE_TAC[TAUT `(~p ==> q) <=> (~q ==> p)`, METIS [] ``(a <> b) = ~(a = b:real)``] THEN
-  REWRITE_TAC[INTERIOR_CLOSED_INTERVAL] THEN
-  REWRITE_TAC[SET_RULE ``(s INTER t = {}) <=> !x. ~(x IN s /\ x IN t)``,
-            METIS [] ``(a <> b) = ~(a = b:real)``] THEN
-  ASM_SIMP_TAC std_ss [IN_NUMSEG, INTERVAL_NE_EMPTY, IN_INTERVAL,
-   INTERIOR_CLOSED_INTERVAL] THEN
-  SIMP_TAC std_ss [GSYM FORALL_AND_THM] THEN
-  REWRITE_TAC[TAUT `(a ==> b) /\ (a ==> c) <=> a ==> b /\ c`] THEN
-  SIMP_TAC std_ss [NOT_FORALL_THM] THEN REPEAT CONJ_TAC THEN
-  DISCH_THEN(X_CHOOSE_TAC ``x:real``) THEN
-  AP_TERM_TAC THEN SIMP_TAC std_ss [CONS_11, PAIR_EQ] THENL
-  [UNDISCH_TAC ``l:num <= m`` THEN GEN_REWR_TAC LAND_CONV [LESS_OR_EQ] THEN
-   STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
-   UNDISCH_TAC ``((if 1:num < l then c else a) < x:real /\
-          x:real < if 1:num < l then d else if 1 = l then c else b) /\
-                  (if 1:num < m then c else a) < x:real /\
-          x:real < if 1:num < m then d else if 1 = m then c else b`` THEN
-   ASM_SIMP_TAC arith_ss [] THEN METIS_TAC [REAL_LT_ANTISYM],
-   UNDISCH_TAC ``l:num <= m`` THEN GEN_REWR_TAC LAND_CONV [LESS_OR_EQ] THEN
-   STRIP_TAC THEN ASM_REWRITE_TAC[] THENL
-   [UNDISCH_TAC ``((if 1:num < l then c else a) < x:real /\
-           x:real < if 1:num < l then d else if 1 = l then c else b) /\
-                   (if 1:num < m then c else if 1 = m then d else a) < x:real /\
-           x:real < if 1:num < m then d else b`` THEN
-   ASM_SIMP_TAC arith_ss [] THEN METIS_TAC [REAL_LT_ANTISYM], ALL_TAC] THEN
-   FIRST_X_ASSUM(SUBST_ALL_TAC o SYM) THEN
-   CONJ_TAC THEN ASM_CASES_TAC ``1:num = l`` THEN
-   ASM_SIMP_TAC arith_ss [LESS_REFL] THEN FIRST_X_ASSUM SUBST_ALL_TAC THEN
-   UNDISCH_TAC `` ((if l:num < l then c else a) < x:real /\
-           x:real < if l:num < l then d else if l = l then c else b) /\
-                   (if l:num < l then c else if l = l then d else a) < x:real /\
-           x:real < if l:num < l then d else b`` THEN
-   ASM_SIMP_TAC arith_ss [LESS_REFL] THEN
-   ASM_REAL_ARITH_TAC,
-   UNDISCH_TAC ``l:num <= m`` THEN GEN_REWR_TAC LAND_CONV [LESS_OR_EQ] THEN
-   STRIP_TAC THEN ASM_REWRITE_TAC[] THENL
-   [UNDISCH_TAC `` ((if 1:num < l then c else if 1 = l then d else a) < x:real /\
-            x:real < if 1:num < l then d else b) /\
-                    (if 1:num < m then c else a) < x:real /\
-            x:real < if 1:num < m then d else if 1 = m then c else b`` THEN
-   ASM_SIMP_TAC arith_ss [] THEN METIS_TAC [REAL_LT_ANTISYM], ALL_TAC] THEN
-   FIRST_X_ASSUM(SUBST_ALL_TAC o SYM) THEN
-   CONJ_TAC THEN ASM_CASES_TAC ``1:num = l`` THEN
-   ASM_SIMP_TAC arith_ss [LESS_REFL] THEN FIRST_X_ASSUM SUBST_ALL_TAC THEN
-   UNDISCH_TAC ``((if l:num < l then c else if l = l then d else a) < x:real /\
+  ASM_REWRITE_TAC[DIVISION_OF] THEN DISCH_TAC THEN REPEAT CONJ_TAC THENL [
+    SIMP_TAC std_ss [GSYM IMAGE_DEF] THEN
+    SIMP_TAC std_ss [FINITE_UNION, IMAGE_FINITE, FINITE_NUMSEG]
+    ,
+    REWRITE_TAC[IN_UNION, TAUT ‘a \/ b ==> c <=> (a ==> c) /\ (b ==> c)’] THEN
+    SIMP_TAC std_ss [GSYM IMAGE_DEF, FORALL_AND_THM, FORALL_IN_IMAGE] THEN
+    ASM_SIMP_TAC std_ss [IN_NUMSEG, INTERVAL_NE_EMPTY] THEN
+    CONJ_TAC THEN X_GEN_TAC “l:num” THEN DISCH_TAC THEN
+    (CONJ_TAC THENL [ALL_TAC, MESON_TAC[]]) THEN
+    REPEAT STRIP_TAC THEN
+    REPEAT (COND_CASES_TAC THEN ASM_SIMP_TAC std_ss [])
+    ,
+    SIMP_TAC std_ss [IN_UNION, IMP_CONJ, RIGHT_FORALL_IMP_THM] THEN
+    SIMP_TAC std_ss [
+        SET_RULE “(!y. y IN {f x | x IN s} \/ y IN {g x | x IN s} ==> P y) <=>
+                  (!x. x IN s ==> P(f x) /\ P(g x))”
+      ] THEN
+    SIMP_TAC std_ss [GSYM FORALL_AND_THM, IN_NUMSEG] THEN
+    REWRITE_TAC[TAUT ‘(a ==> b) /\ (a ==> c) <=> a ==> b /\ c’] THEN
+    SIMP_TAC std_ss [GSYM RIGHT_FORALL_IMP_THM] THEN
+    ‘!l l'. (\l l'.
+               1:num <= l /\ l <= 2:num ==>
+               1:num <= l' /\ l' <= 2:num ==>
+               ((interval
+                 [(if 1 < l then c else a,
+                   if 1 < l then d else if 1 = l then c else b)] <>
+                 interval
+                 [(if 1 < l' then c else a,
+                   if 1 < l' then d else if 1 = l' then c else b)] ==>
+                 (interior
+                  (interval
+                   [(if 1 < l then c else a,
+                     if 1 < l then d else if 1 = l then c else b)]) INTER
+                  interior
+                  (interval
+                   [(if 1 < l' then c else a,
+                     if 1 < l' then d else if 1 = l' then c else b)]) =
+                  {})) /\
+                (interval
+                 [(if 1 < l then c else a,
+                   if 1 < l then d else if 1 = l then c else b)] <>
+                 interval
+                 [(if 1 < l' then c else if 1 = l' then d else a,
+                   if 1 < l' then d else b)] ==>
+                 (interior
+                  (interval
+                   [(if 1 < l then c else a,
+                     if 1 < l then d else if 1 = l then c else b)]) INTER
+                  interior
+                  (interval
+                   [(if 1 < l' then c else if 1 = l' then d else a,
+                     if 1 < l' then d else b)]) =
+                  {}))) /\
+               (interval
+                [(if 1 < l then c else if 1 = l then d else a,
+                  if 1 < l then d else b)] <>
+                interval
+                [(if 1 < l' then c else a,
+                  if 1 < l' then d else if 1 = l' then c else b)] ==>
+                (interior
+                 (interval
+                  [(if 1 < l then c else if 1 = l then d else a,
+                    if 1 < l then d else b)]) INTER
+                 interior
+                 (interval
+                  [(if 1 < l' then c else a,
+                    if 1 < l' then d else if 1 = l' then c else b)]) =
+                 {})) /\
+               (interval
+                [(if 1 < l then c else if 1 = l then d else a,
+                  if 1 < l then d else b)] <>
+                interval
+                [(if 1 < l' then c else if 1 = l' then d else a,
+                  if 1 < l' then d else b)] ==>
+                (interior
+                 (interval
+                  [(if 1 < l then c else if 1 = l then d else a,
+                    if 1 < l then d else b)]) INTER
+                 interior
+                 (interval
+                  [(if 1 < l' then c else if 1 = l' then d else a,
+                    if 1 < l' then d else b)]) = {}))) l l'’
+      suffices_by SIMP_TAC std_ss [] >>
+    MATCH_MP_TAC WLOG_LE THEN CONJ_TAC
+    >- (SIMP_TAC std_ss [] THEN REPEAT GEN_TAC THEN
+        ONCE_REWRITE_TAC[TAUT ‘a ==> b ==> c <=> b ==> a ==> c’] THEN
+        SIMP_TAC std_ss [simpLib.AC INTER_ASSOC INTER_COMM,
+                         simpLib.AC CONJ_ASSOC CONJ_COMM] THEN
+        MESON_TAC[]) >>
+    MAP_EVERY X_GEN_TAC [“l:num”, “m:num”] THEN
+    SIMP_TAC std_ss [] THEN
+    DISCH_TAC THEN STRIP_TAC THEN STRIP_TAC THEN
+    ONCE_REWRITE_TAC[TAUT ‘(~p ==> q) <=> (~q ==> p)’,
+                     METIS [] “(a <> b) = ~(a = b:real)”] THEN
+    REWRITE_TAC[INTERIOR_CLOSED_INTERVAL] THEN
+    REWRITE_TAC[
+        SET_RULE “(s INTER t = {}) <=> !x. ~(x IN s /\ x IN t)”,
+        METIS [] “(a <> b) = ~(a = b:real)”
+      ] THEN
+    ASM_SIMP_TAC std_ss [IN_NUMSEG, INTERVAL_NE_EMPTY, IN_INTERVAL,
+                         INTERIOR_CLOSED_INTERVAL] THEN
+    SIMP_TAC std_ss [GSYM FORALL_AND_THM] THEN
+    REWRITE_TAC[TAUT ‘(a ==> b) /\ (a ==> c) <=> a ==> b /\ c’] THEN
+    SIMP_TAC std_ss [NOT_FORALL_THM] THEN REPEAT CONJ_TAC THEN
+    DISCH_THEN(X_CHOOSE_TAC “x:real”) THEN
+    AP_TERM_TAC THEN SIMP_TAC std_ss [CONS_11, PAIR_EQ] THENL [
+        UNDISCH_TAC “l:num <= m” THEN GEN_REWR_TAC LAND_CONV [LESS_OR_EQ] THEN
+        STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
+        UNDISCH_TAC
+        “((if 1:num < l then c else a) < x:real ∧
+          x:real < if 1:num < l then d else if 1 = l then c else b) ∧
+         (if 1:num < m then c else a) < x:real ∧
+         x:real < if 1:num < m then d else if 1 = m then c else b” THEN
+        ASM_SIMP_TAC arith_ss [] THEN METIS_TAC [REAL_LT_ANTISYM]
+        ,
+        UNDISCH_TAC “l:num <= m” THEN GEN_REWR_TAC LAND_CONV [LESS_OR_EQ] THEN
+        STRIP_TAC THEN ASM_REWRITE_TAC[] THENL [
+            UNDISCH_TAC
+            “((if 1:num < l then c else a) < x:real /\
+              x:real < if 1:num < l then d else if 1 = l then c else b) /\
+             (if 1:num < m then c else if 1 = m then d else a) < x:real /\
+             x:real < if 1:num < m then d else b” THEN
+            ASM_SIMP_TAC arith_ss [] THEN METIS_TAC [REAL_LT_ANTISYM],
+            ALL_TAC] THEN
+        FIRST_X_ASSUM(SUBST_ALL_TAC o SYM) THEN
+        CONJ_TAC THEN ASM_CASES_TAC “1:num = l” THEN
+        ASM_SIMP_TAC arith_ss [LESS_REFL] THEN FIRST_X_ASSUM SUBST_ALL_TAC THEN
+        UNDISCH_TAC
+        “((if l:num < l then c else a) < x:real /\
+          x:real < if l:num < l then d else if l = l then c else b) /\
+         (if l:num < l then c else if l = l then d else a) < x:real /\
+         x:real < if l:num < l then d else b” THEN
+        ASM_SIMP_TAC arith_ss [LESS_REFL] THEN
+        ASM_REAL_ARITH_TAC
+        ,
+        UNDISCH_TAC “l:num <= m” THEN GEN_REWR_TAC LAND_CONV [LESS_OR_EQ] THEN
+        STRIP_TAC THEN ASM_REWRITE_TAC[] THENL [
+            UNDISCH_TAC
+            “((if 1:num < l then c else if 1 = l then d else a) < x:real /\
+              x:real < if 1:num < l then d else b) /\
+             (if 1:num < m then c else a) < x:real /\
+             x:real < if 1:num < m then d else if 1 = m then c else b” THEN
+            ASM_SIMP_TAC arith_ss [] THEN METIS_TAC [REAL_LT_ANTISYM],
+            ALL_TAC
+          ] THEN
+        FIRST_X_ASSUM(SUBST_ALL_TAC o SYM) THEN
+        CONJ_TAC THEN ASM_CASES_TAC “1:num = l” THEN
+        ASM_SIMP_TAC arith_ss [LESS_REFL] THEN FIRST_X_ASSUM SUBST_ALL_TAC THEN
+        UNDISCH_TAC
+        “((if l:num < l then c else if l = l then d else a) < x:real /\
           x:real < if l:num < l then d else b) /\
-                  (if l:num < l then c else a) < x:real /\
-          x:real < if l:num < l then d else if l = l then c else b`` THEN
-   ASM_SIMP_TAC arith_ss [LESS_REFL] THEN
-   ASM_REAL_ARITH_TAC,
-   UNDISCH_TAC ``l:num <= m`` THEN GEN_REWR_TAC LAND_CONV [LESS_OR_EQ] THEN
-   STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
-   UNDISCH_TAC ``((if 1:num < l then c else if 1 = l then d else a) < x:real /\
+         (if l:num < l then c else a) < x:real /\
+         x:real < if l:num < l then d else if l = l then c else b” THEN
+        ASM_SIMP_TAC arith_ss [LESS_REFL] THEN
+        ASM_REAL_ARITH_TAC
+        ,
+        UNDISCH_TAC “l:num <= m” THEN GEN_REWR_TAC LAND_CONV [LESS_OR_EQ] THEN
+        STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
+        UNDISCH_TAC
+        “((if 1:num < l then c else if 1 = l then d else a) < x:real /\
           x:real < if 1:num < l then d else b) /\
-                  (if 1:num < m then c else if 1 = m then d else a) < x:real /\
-          x:real < if 1:num < m then d else b`` THEN
-   ASM_SIMP_TAC arith_ss [] THEN METIS_TAC [REAL_LT_ANTISYM]],
-  MATCH_MP_TAC SUBSET_ANTISYM THEN CONJ_TAC THENL
-  [SIMP_TAC std_ss [IMP_CONJ, SUBSET_DEF, FORALL_IN_BIGUNION, GSYM IMAGE_DEF] THEN
-   SIMP_TAC std_ss [IN_BIGUNION, IN_INSERT, IN_UNION, FORALL_IN_IMAGE,
-    RIGHT_FORALL_IMP_THM, FORALL_AND_THM,
-    TAUT `(a \/ b ==> c) <=> (a ==> c) /\ (b ==> c)`] THEN
-   ASM_SIMP_TAC std_ss [IN_INTERVAL, IN_NUMSEG] THEN
-   REPEAT CONJ_TAC THEN GEN_TAC THEN DISCH_TAC THEN GEN_TAC THEN
-   METIS_TAC[REAL_LE_TRANS], ALL_TAC] THEN
-  FIRST_ASSUM(MATCH_MP_TAC o MATCH_MP (SET_RULE
-   ``a IN s ==> (c DIFF a) SUBSET BIGUNION s ==> c SUBSET BIGUNION s``)) THEN
-  REWRITE_TAC[SUBSET_DEF, IN_DIFF, IN_INTERVAL] THEN X_GEN_TAC ``x:real`` THEN
-  DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
-  SIMP_TAC std_ss [NOT_FORALL_THM, NOT_IMP] THEN
-  REWRITE_TAC [GSYM DE_MORGAN_THM] THEN DISCH_TAC THEN
-  SIMP_TAC std_ss [IN_BIGUNION] THEN ONCE_REWRITE_TAC [CONJ_SYM] THEN
-  SIMP_TAC std_ss [IN_BIGUNION, GSYM IMAGE_DEF, EXISTS_IN_IMAGE, IN_UNION,
-  EXISTS_OR_THM, RIGHT_AND_OVER_OR] THEN
-  SIMP_TAC std_ss [OR_EXISTS_THM] THEN EXISTS_TAC ``1:num`` THEN
-  ASM_SIMP_TAC std_ss [IN_NUMSEG, IN_INTERVAL,
-   ARITH_PROVE ``x <= n ==> x <= n + 1:num``] THEN
-  POP_ASSUM (MP_TAC o REWRITE_RULE [DE_MORGAN_THM]) THEN
-  MATCH_MP_TAC MONO_OR THEN REWRITE_TAC[REAL_NOT_LE] THEN
-  METIS_TAC [REAL_LE_LT]]
+         (if 1:num < m then c else if 1 = m then d else a) < x:real /\
+         x:real < if 1:num < m then d else b” THEN
+        ASM_SIMP_TAC arith_ss [] THEN METIS_TAC [REAL_LT_ANTISYM]
+      ]
+    ,
+    MATCH_MP_TAC SUBSET_ANTISYM THEN CONJ_TAC
+    >- (SIMP_TAC std_ss [IMP_CONJ, SUBSET_DEF, FORALL_IN_BIGUNION,
+                         GSYM IMAGE_DEF] THEN
+        SIMP_TAC std_ss [IN_BIGUNION, IN_INSERT, IN_UNION, FORALL_IN_IMAGE,
+                         RIGHT_FORALL_IMP_THM, FORALL_AND_THM,
+                         TAUT ‘(a \/ b ==> c) <=> (a ==> c) /\ (b ==> c)’] THEN
+        ASM_SIMP_TAC std_ss [IN_INTERVAL, IN_NUMSEG] THEN
+        REPEAT CONJ_TAC THEN GEN_TAC THEN DISCH_TAC THEN GEN_TAC THEN
+        METIS_TAC[REAL_LE_TRANS]) >>
+    FIRST_ASSUM(MATCH_MP_TAC o
+                MATCH_MP (SET_RULE “a IN s ==> (c DIFF a) SUBSET BIGUNION s ==>
+                                    c SUBSET BIGUNION s”)) THEN
+    REWRITE_TAC[SUBSET_DEF, IN_DIFF, IN_INTERVAL] THEN X_GEN_TAC “x:real” THEN
+    DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
+    SIMP_TAC std_ss [NOT_FORALL_THM, NOT_IMP] THEN
+    REWRITE_TAC [GSYM DE_MORGAN_THM] THEN DISCH_TAC THEN
+    SIMP_TAC std_ss [IN_BIGUNION] THEN ONCE_REWRITE_TAC [CONJ_SYM] THEN
+    SIMP_TAC std_ss [IN_BIGUNION, GSYM IMAGE_DEF, EXISTS_IN_IMAGE, IN_UNION,
+                     EXISTS_OR_THM, RIGHT_AND_OVER_OR] THEN
+    SIMP_TAC std_ss [GSYM EXISTS_OR_THM] THEN EXISTS_TAC “1:num” THEN
+    ASM_SIMP_TAC std_ss [IN_NUMSEG, IN_INTERVAL,
+                         ARITH_PROVE “x <= n ==> x <= n + 1:num”] THEN
+    POP_ASSUM (MP_TAC o REWRITE_RULE [DE_MORGAN_THM]) THEN
+    MATCH_MP_TAC MONO_OR THEN REWRITE_TAC[REAL_NOT_LE] THEN
+    METIS_TAC [REAL_LE_LT]
+  ]
 QED
 
 Theorem PARTIAL_DIVISION_EXTEND_INTERVAL:
@@ -2771,6 +2795,14 @@ Theorem INTEGRABLE_EQ:
         ==> g integrable_on s
 Proof
   REWRITE_TAC[integrable_on] THEN METIS_TAC[HAS_INTEGRAL_EQ]
+QED
+
+Theorem INTEGRABLE_EQ_EQ:
+   !f:real->real g s.
+        (!x. x IN s ==> (f(x) = g(x))) ==>
+        (f integrable_on s <=> g integrable_on s)
+Proof
+  METIS_TAC[INTEGRABLE_EQ]
 QED
 
 Theorem HAS_INTEGRAL_EQ_EQ:
@@ -5867,48 +5899,131 @@ Theorem INTEGRAL_HAS_VECTOR_DERIVATIVE_POINTWISE:
 Proof
   REWRITE_TAC[IN_INTERVAL] THEN REPEAT STRIP_TAC THEN
   REWRITE_TAC[has_vector_derivative, HAS_DERIVATIVE_WITHIN_ALT] THEN
-  CONJ_TAC THENL
-   [SIMP_TAC std_ss [linear] THEN
-    CONJ_TAC THEN REAL_ARITH_TAC,
-    ALL_TAC] THEN
+  CONJ_TAC
+  >- (ONCE_REWRITE_TAC [REAL_MUL_COMM] \\
+      HO_MATCH_MP_TAC LINEAR_COMPOSE_CMUL \\
+      REWRITE_TAC [LINEAR_ID]) \\
   X_GEN_TAC ``e:real`` THEN DISCH_TAC THEN REWRITE_TAC[IN_INTERVAL] THEN
-  UNDISCH_TAC ``f continuous (at x within interval [(a,b)])`` THEN DISCH_TAC THEN
-  FIRST_ASSUM(MP_TAC o REWRITE_RULE [continuous_within]) THEN
+  Q.PAT_X_ASSUM ‘f continuous (at x within interval [a,b])’
+    (MP_TAC o REWRITE_RULE [continuous_within]) THEN
   DISCH_THEN(MP_TAC o SPEC ``e:real``) THEN
   ASM_REWRITE_TAC[IN_INTERVAL, dist] THEN
   STRIP_TAC THEN EXISTS_TAC ``d:real`` THEN
   ASM_REWRITE_TAC[] THEN X_GEN_TAC ``y:real`` THEN STRIP_TAC THEN
   SIMP_TAC std_ss [] THEN
+ (* stage work *)
   DISJ_CASES_TAC(REAL_ARITH ``x <= y \/ y <= x:real``) THENL
-   [ASM_SIMP_TAC std_ss [REAL_ARITH ``x <= y ==> (abs(y - x) = y - x:real)``],
+  [ (* goal 1 (of 2) *)
+    ASM_SIMP_TAC std_ss [REAL_ARITH ``x <= y ==> (abs(y - x) = y - x:real)``],
+    (* goal 2 (of 2) *)
     ONCE_REWRITE_TAC[REAL_ARITH
      ``fy - fx - (x - y) * c:real = -(fx - fy - (y - x) * c)``] THEN
-    ASM_SIMP_TAC std_ss [ABS_NEG, REAL_ARITH ``x <= y ==> (abs(x - y) = y - x:real)``]] THEN
-  ASM_SIMP_TAC std_ss [GSYM CONTENT_CLOSED_INTERVAL] THEN MATCH_MP_TAC HAS_INTEGRAL_BOUND THEN
+    ASM_SIMP_TAC std_ss [ABS_NEG,
+                         REAL_ARITH ``x <= y ==> (abs(x - y) = y - x:real)``]
+  ] THEN
+ (* shared tactics *)
+  ASM_SIMP_TAC std_ss [GSYM CONTENT_CLOSED_INTERVAL] THEN
+ (* applying a key theorem *)
+  MATCH_MP_TAC HAS_INTEGRAL_BOUND THEN
   EXISTS_TAC ``(\u. f(u) - f(x)):real->real`` THEN
-  (ASM_SIMP_TAC std_ss [REAL_LT_IMP_LE] THEN CONJ_TAC THENL
-   [ALL_TAC,
-    REPEAT STRIP_TAC THEN
-    MATCH_MP_TAC REAL_LT_IMP_LE THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
-    REPEAT(POP_ASSUM MP_TAC) THEN
-    SIMP_TAC std_ss [IN_INTERVAL] THEN
-    REAL_ARITH_TAC] THEN
-   ONCE_REWRITE_TAC [METIS [] ``(\u:real. f u - (f:real->real) x) = (\u:real. f u - (\u. f x) u)``] THEN
-   MATCH_MP_TAC HAS_INTEGRAL_SUB THEN REWRITE_TAC[HAS_INTEGRAL_CONST]) THENL
-    [SUBGOAL_THEN
+  (ASM_SIMP_TAC std_ss [REAL_LT_IMP_LE] THEN
+   reverse CONJ_TAC
+   >- (Q.X_GEN_TAC ‘z’ THEN REPEAT STRIP_TAC THEN
+       MATCH_MP_TAC REAL_LT_IMP_LE THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
+       REPEAT(POP_ASSUM MP_TAC) THEN
+       SIMP_TAC std_ss [IN_INTERVAL] THEN
+       REAL_ARITH_TAC) THEN
+   HO_MATCH_MP_TAC HAS_INTEGRAL_SUB THEN REWRITE_TAC[HAS_INTEGRAL_CONST]) THENL
+   [ (* goal 1 (of 2) *)
+     SUBGOAL_THEN
       ``(integral(interval[a,x]) f + integral(interval[x,y]) f =
          integral(interval[a,y]) f) /\
        ((f:real->real) has_integral integral(interval[x,y]) f)
         (interval[x,y])``
-      (fn th => METIS_TAC[th,
-          REAL_ARITH ``(a + b = c:real) ==> (c - a = b:real)``]),
+      (fn th => METIS_TAC[th, REAL_ARITH ``(a + b = c:real) ==> (c - a = b:real)``]),
+     (* goal 2 (of 2) *)
      SUBGOAL_THEN
       ``(integral(interval[a,y]) f + integral(interval[y,x]) f =
          integral(interval[a,x]) f) /\
        ((f:real->real) has_integral integral(interval[y,x]) f)
         (interval[y,x])``
-       (fn th => METIS_TAC[th,
-         REAL_ARITH ``(a + b = c:real) ==> (c - a = b:real)``])] THEN
+      (fn th => METIS_TAC[th,REAL_ARITH ``(a + b = c:real) ==> (c - a = b:real)``])
+   ] THEN
+ (* shared tactics, again *)
+   (CONJ_TAC THENL
+     [MATCH_MP_TAC INTEGRAL_COMBINE,
+      MATCH_MP_TAC INTEGRABLE_INTEGRAL] THEN
+    ASM_REWRITE_TAC[] THEN
+    MATCH_MP_TAC INTEGRABLE_SUBINTERVAL THEN
+    MAP_EVERY EXISTS_TAC [``a:real``, ``b:real``] THEN
+    ASM_SIMP_TAC std_ss [INTEGRABLE_CONTINUOUS, SUBSET_INTERVAL, REAL_LE_REFL] THEN
+    ASM_REAL_ARITH_TAC)
+QED
+
+Theorem INTEGRAL_HAS_VECTOR_DERIVATIVE_NEG_POINTWISE:
+   !f:real->real a b x.
+        f integrable_on interval[a,b] /\ x IN interval[a,b] /\
+        f continuous (at x within interval[a,b])
+        ==> ((\u. integral (interval [u,b]) f) has_vector_derivative -f x)
+            (at x within interval [a,b])
+Proof
+  REWRITE_TAC[IN_INTERVAL] THEN REPEAT STRIP_TAC THEN
+  REWRITE_TAC[has_vector_derivative, HAS_DERIVATIVE_WITHIN_ALT] THEN
+  CONJ_TAC
+  >- (ONCE_REWRITE_TAC [REAL_MUL_COMM] \\
+      HO_MATCH_MP_TAC LINEAR_COMPOSE_CMUL \\
+      REWRITE_TAC [LINEAR_ID]) \\
+  X_GEN_TAC ``e:real`` THEN DISCH_TAC THEN REWRITE_TAC[IN_INTERVAL] THEN
+  Q.PAT_X_ASSUM ‘f continuous (at x within interval [a,b])’
+    (MP_TAC o REWRITE_RULE [continuous_within]) THEN
+  DISCH_THEN(MP_TAC o SPEC ``e:real``) THEN
+  ASM_REWRITE_TAC[IN_INTERVAL, dist] THEN
+  STRIP_TAC THEN EXISTS_TAC ``d:real`` THEN
+  ASM_REWRITE_TAC[] THEN X_GEN_TAC ``y:real`` THEN STRIP_TAC THEN
+  SIMP_TAC std_ss [] THEN
+ (* stage work *)
+  DISJ_CASES_TAC(REAL_ARITH ``x <= y \/ y <= x:real``) THENL
+  [ (* goal 1 (of 2) *)
+    ASM_SIMP_TAC std_ss [REAL_ARITH ``x <= y ==> (abs(y - x) = y - x:real)``],
+    (* goal 2 (of 2) *)
+    ONCE_REWRITE_TAC[REAL_ARITH
+     ``fy - fx - (x - y) * c:real = -(fx - fy - (y - x) * c)``] THEN
+    ASM_SIMP_TAC std_ss [ABS_NEG,
+                         REAL_ARITH ``x <= y ==> (abs(x - y) = y - x:real)``]
+  ] THEN
+ (* shared tactics *)
+  ASM_SIMP_TAC std_ss [GSYM CONTENT_CLOSED_INTERVAL] THEN
+ (* applying a key theorem *)
+  MATCH_MP_TAC HAS_INTEGRAL_BOUND THEN
+  EXISTS_TAC ``(\u. f(x) - f(u)):real->real`` THEN
+  (ASM_SIMP_TAC std_ss [REAL_LT_IMP_LE] THEN
+   reverse CONJ_TAC
+   >- (Q.X_GEN_TAC ‘z’ >> rpt STRIP_TAC \\
+       MATCH_MP_TAC REAL_LT_IMP_LE \\
+       ONCE_REWRITE_TAC [ABS_SUB] \\
+       FIRST_X_ASSUM MATCH_MP_TAC \\
+       REPEAT(POP_ASSUM MP_TAC) \\
+       SIMP_TAC std_ss [IN_INTERVAL] \\
+       REAL_ARITH_TAC) \\
+   REWRITE_TAC [REAL_MUL_RNEG, REAL_SUB_RNEG,
+                REAL_ARITH “a - b + c = c - (b - a :real)”] \\
+   HO_MATCH_MP_TAC HAS_INTEGRAL_SUB THEN REWRITE_TAC[HAS_INTEGRAL_CONST]) THENL
+   [ (* goal 1 (of 2) *)
+     SUBGOAL_THEN
+      ``(integral(interval[x,y]) f + integral(interval[y,b]) f =
+         integral(interval[x,b]) f) /\
+       ((f:real->real) has_integral integral(interval[x,y]) f)
+        (interval[x,y])``
+      (fn th => METIS_TAC[th, REAL_ARITH ``(a + b = c:real) ==> (c - b = a:real)``]),
+     (* goal 2 (of 2) *)
+     SUBGOAL_THEN
+      ``(integral(interval[y,x]) f + integral(interval[x,b]) f =
+         integral(interval[y,b]) f) /\
+       ((f:real->real) has_integral integral(interval[y,x]) f)
+        (interval[y,x])``
+      (fn th => METIS_TAC[th,REAL_ARITH ``(a + b = c:real) ==> (c - b = a:real)``])
+   ] THEN
+ (* shared tactics, again *)
    (CONJ_TAC THENL
      [MATCH_MP_TAC INTEGRAL_COMBINE,
       MATCH_MP_TAC INTEGRABLE_INTEGRAL] THEN
@@ -5928,6 +6043,18 @@ Theorem INTEGRAL_HAS_VECTOR_DERIVATIVE:
 Proof
   REPEAT STRIP_TAC THEN
   MATCH_MP_TAC INTEGRAL_HAS_VECTOR_DERIVATIVE_POINTWISE THEN
+  ASM_MESON_TAC[INTEGRABLE_CONTINUOUS, CONTINUOUS_ON_EQ_CONTINUOUS_WITHIN]
+QED
+
+Theorem INTEGRAL_HAS_VECTOR_DERIVATIVE_NEG:
+   !f:real->real a b.
+     f continuous_on interval[a,b]
+     ==> !x. x IN interval[a,b]
+             ==> ((\u. integral (interval[u,b]) f) has_vector_derivative -f(x))
+                 (at x within interval[a,b])
+Proof
+  REPEAT STRIP_TAC THEN
+  MATCH_MP_TAC INTEGRAL_HAS_VECTOR_DERIVATIVE_NEG_POINTWISE THEN
   ASM_MESON_TAC[INTEGRABLE_CONTINUOUS, CONTINUOUS_ON_EQ_CONTINUOUS_WITHIN]
 QED
 
@@ -6736,6 +6863,35 @@ Theorem INTEGRABLE_RESTRICT_UNIV:
          f integrable_on s
 Proof
   REWRITE_TAC[integrable_on, HAS_INTEGRAL_RESTRICT_UNIV]
+QED
+
+(* NOTE: These are modern version of the above "RESTRICT_UNIV" theorems *)
+Theorem HAS_INTEGRAL_MUL_INDICATOR :
+    !f s l. ((\x. f x * indicator s x) has_integral l) UNIV <=>
+            (f has_integral l) s
+Proof
+    rpt GEN_TAC
+ >> ONCE_REWRITE_TAC [GSYM HAS_INTEGRAL_RESTRICT_UNIV]
+ >> simp []
+ >> MATCH_MP_TAC HAS_INTEGRAL_EQ_EQ >> rw [indicator]
+QED
+
+Theorem INTEGRAL_MUL_INDICATOR :
+    !f s. integral UNIV (\x. f x * indicator s x) = integral s f
+Proof
+    rpt GEN_TAC
+ >> ONCE_REWRITE_TAC [GSYM INTEGRAL_RESTRICT_UNIV]
+ >> simp []
+ >> MATCH_MP_TAC INTEGRAL_EQ >> rw [indicator]
+QED
+
+Theorem INTEGRABLE_MUL_INDICATOR :
+    !f s. (\x. f x * indicator s x) integrable_on UNIV <=> f integrable_on s
+Proof
+    rpt GEN_TAC
+ >> ONCE_REWRITE_TAC [GSYM INTEGRABLE_RESTRICT_UNIV]
+ >> simp []
+ >> MATCH_MP_TAC INTEGRABLE_EQ_EQ >> rw [indicator]
 QED
 
 Theorem HAS_INTEGRAL_RESTRICT_INTER:
@@ -10807,6 +10963,15 @@ Proof
   SIMP_TAC std_ss [COND_RAND, ABS_0]
 QED
 
+Theorem HAS_ABSOLUTE_INTEGRAL :
+   !(f :real->real) s y.
+        f absolutely_integrable_on s /\ integral s f = y <=>
+        f absolutely_integrable_on s /\ (f has_integral y) s
+Proof
+  MESON_TAC[ABSOLUTELY_INTEGRABLE_IMP_INTEGRABLE,
+            HAS_INTEGRAL_INTEGRABLE_INTEGRAL]
+QED
+
 Theorem ABSOLUTELY_INTEGRABLE_EQ:
    !f:real->real g s.
         (!x. x IN s ==> (f x = g x)) /\ f absolutely_integrable_on s
@@ -10817,6 +10982,14 @@ Proof
    [EXISTS_TAC ``f:real->real``,
     EXISTS_TAC ``\x. abs((f:real->real) x)``] THEN
   ASM_SIMP_TAC std_ss []
+QED
+
+Theorem ABSOLUTELY_INTEGRABLE_EQ_EQ:
+   !f:real->real g s.
+        (!x. x IN s ==> (f x = g x)) ==>
+        (f absolutely_integrable_on s <=> g absolutely_integrable_on s)
+Proof
+  METIS_TAC [ABSOLUTELY_INTEGRABLE_EQ]
 QED
 
 Theorem ABSOLUTELY_INTEGRABLE_BOUNDED_SETVARIATION:
@@ -11795,6 +11968,16 @@ Theorem ABSOLUTELY_INTEGRABLE_RESTRICT_UNIV:
 Proof
   SIMP_TAC std_ss [absolutely_integrable_on, INTEGRABLE_RESTRICT_UNIV,
               COND_RAND, ABS_0]
+QED
+
+Theorem ABSOLUTELY_INTEGRABLE_MUL_INDICATOR :
+    !f s. (\x. f x * indicator s x) absolutely_integrable_on UNIV <=>
+          f absolutely_integrable_on s
+Proof
+    rpt GEN_TAC
+ >> ONCE_REWRITE_TAC [GSYM ABSOLUTELY_INTEGRABLE_RESTRICT_UNIV]
+ >> simp []
+ >> MATCH_MP_TAC ABSOLUTELY_INTEGRABLE_EQ_EQ >> rw [indicator]
 QED
 
 Theorem ABSOLUTELY_INTEGRABLE_CONST:
@@ -17920,11 +18103,14 @@ Proof
            [EXISTS_TAC ``a:real`` THEN
             ASM_SIMP_TAC std_ss [ETA_AX, ENDS_IN_INTERVAL],
             ALL_TAC] THEN
-          SIMP_TAC std_ss [METIS [OR_EXISTS_THM]
-           ``(?(a :real). (!(x :real). (y :real) <= (g :real -> real) x <=> a <= x)) \/
-             (?(a :real). !(x :real). y <= g x <=> a < x) <=>
-              ?a. ((\a. !x. y <= (g:real->real) x <=> a <= x) a \/
-                   (\a. !x. y <= (g:real->real) x <=> a < x) a)``] THEN
+          SIMP_TAC std_ss [
+              METIS []
+                “(?(a :real). (!(x :real). (y :real) <= (g :real -> real) x <=>
+                                           a <= x)) \/
+                 (?(a :real). !(x :real). y <= g x <=> a < x) <=>
+                 ?a. ((\a. !x. y <= (g:real->real) x <=> a <= x) a \/
+                      (\a. !x. y <= (g:real->real) x <=> a < x) a)”
+            ] THEN
           DISCH_THEN(X_CHOOSE_THEN ``d:real`` ASSUME_TAC) THEN
           ASM_CASES_TAC ``d < a:real`` THENL
            [EXISTS_TAC ``a:real`` THEN

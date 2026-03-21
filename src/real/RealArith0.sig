@@ -2,7 +2,17 @@ signature RealArith0 =
 sig
   include Abbrev
 
-  type positivstellensatz
+  datatype positivstellensatz =
+      Axiom_eq of int
+    | Axiom_le of int
+    | Axiom_lt of int
+    | Rational_eq of Arbrat.rat
+    | Rational_le of Arbrat.rat
+    | Rational_lt of Arbrat.rat
+    | Square of term
+    | Eqmul of term * positivstellensatz
+    | Sum of positivstellensatz * positivstellensatz
+    | Product of positivstellensatz * positivstellensatz
   type rat = Arbrat.rat
   type aint = Arbint.int
 
@@ -33,7 +43,7 @@ sig
                              thm list * thm list * thm list -> 'a
 
  (* for REAL_LINEAR_PROVER, 0: nothing, 1: minimal, 2+: details *)
-  val verbose_level        : int ref (* default: 1 *)
+  val verbose_level        : int ref (* default: 0 *)
 
   val GEN_REAL_ARITH0:
     (rat -> term) * conv * conv * conv * conv * conv * conv * conv * conv * conv *

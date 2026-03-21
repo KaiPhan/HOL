@@ -52,6 +52,7 @@ sig
 
 (* Support for persistent theories *)
 
+  val add_anonymous_thm      : thm -> int (* for ThyDataSexp only *)
   val export_theory          : unit -> unit
 
 (* Make hooks available so that theory changes can be seen by
@@ -152,4 +153,5 @@ sig
      TheoryDelta event to be sent to all registered listeners *)
   val load_complete : string -> unit
 
+  val oracle_string_of : thm -> string option
 end
