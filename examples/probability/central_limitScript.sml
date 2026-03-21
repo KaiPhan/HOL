@@ -7352,7 +7352,7 @@ Definition lindeberg_term_def :
     (1 / second_moments p X n) *
     SIGMA (λi. expectation p
                    (λx. (X i x) pow 2 *
-                        indicator_fn {x |  eps * sqrt (second_moments p X n) <= abs (X i x)} x))
+                        indicator_fn {x | eps * sqrt (second_moments p X n) <= abs (X i x)} x))
           (count n)
 End
 
