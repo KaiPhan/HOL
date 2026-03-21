@@ -7372,8 +7372,7 @@ Theorem central_limit_theorem_lindeberg :
                           SIGMA (λi. X i x) (count (SUC n)) /
                                 sqrt (second_moments p X (SUC n))) N
 Proof
-  rpt STRIP_TAC
-  >> cheat
+  cheat
 QED
 
 
