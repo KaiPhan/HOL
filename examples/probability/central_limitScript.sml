@@ -7623,6 +7623,8 @@ Definition lindeberg_term_def :
           (count n)
 End
 
+
+(*
 Theorem central_limit_theorem_lindeberg :
     ∀p X N.
       prob_space p ∧
@@ -7739,7 +7741,7 @@ Proof
 
 
 QED
-
+*)
 
 
 
