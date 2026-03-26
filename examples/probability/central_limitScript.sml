@@ -1967,6 +1967,71 @@ Proof
  >> rw []
 QED
 
+Theorem has_vector_derivative_x_quartic_normal_density:
+    !x. ((\x. -(x pow 3 + 3 * x) * std_normal_density x)
+         has_vector_derivative
+         (x pow 4 * std_normal_density x - 3 * std_normal_density x)) (at x)
+Proof
+    rw [std_normal_density_def]
+ >> qabbrev_tac ‘c = inv (sqrt (2 * pi))’
+ >> MP_TAC (Diff.HAS_VECTOR_DERIVATIVE_CONV “\x:real. -(exp (-(x pow 2) / 2) * c * (x pow 3 + 3 * x))”)
+ >> simp [REAL_NEG_LMUL]
+ >> Know ‘∀x.  -(-c * x * exp (-x² / 2) * (x³ + 3 * x) +
+                 c * exp (-x² / 2) * (3 * x² + 3)) = c * x pow 4 * exp (-x² / 2) − 3 * (c * exp (-x² / 2))’
+ >- (rw [] \\
+     Q.ABBREV_TAC ‘a = c * x * exp (-x² / 2)’ \\
+     ‘-c * x * exp (-x² / 2) * (x pow 3 + 3 * x) = -a * (x pow 3 + 3 * x)’ by rw [Abbr ‘a’] >> POP_ORW \\
+     ‘-(-a * (x pow 3 + 3 * x) + 2 * a) = a * (x pow 3 + 3 * x) - 2 * a’ by REAL_ARITH_TAC >> POP_ORW \\
+     ‘a * (x² + 2) − 2 * a = a * x pow 2’ by REAL_ARITH_TAC >> POP_ORW \\
+     rw [Abbr ‘a’] >> REAL_ARITH_TAC)
+ >> rpt STRIP_TAC
+ >> METIS_TAC []
+QED
+
+Theorem has_integral_std_normal_density_interval :
+    !a b. a <= b ==>
+          ((\x. std_normal_density x) has_integral
+                                      integral (interval [a,b]) std_normal_density) (interval [a,b])
+Proof
+    rpt STRIP_TAC
+ >> Know ‘(λx. std_normal_density x) integrable_on interval [(a,b)]’
+ >- (irule integrationTheory.INTEGRABLE_CONTINUOUS \\
+     METIS_TAC [normal_density_continuous_on])
+ >> METIS_TAC [integrationTheory.HAS_INTEGRAL_INTEGRAL, ETA_AX]
+QED
+
+Theorem has_integral_3_mul_std_normal_density_interval[local] :
+    !a b. a <= b ==>
+          ((\x. 3 * std_normal_density x) has_integral
+                                          3 * integral (interval [a,b]) std_normal_density) (interval [a,b])
+Proof
+    rpt STRIP_TAC
+ >> irule integrationTheory.HAS_INTEGRAL_CMUL
+ >> METIS_TAC [has_integral_std_normal_density_interval]
+QED
+
+Theorem has_integral_x_quartic_std_normal_density_minus_3[local]:
+  !a b. a <= b ==>
+        ((\x. x pow 4 * std_normal_density x - 3 * std_normal_density x)
+         has_integral
+         (-(b pow 3 + 3 * b) * std_normal_density b -
+          (-(a pow 3 + 3 * a) * std_normal_density a))) (interval [a,b])
+Proof
+  rpt STRIP_TAC
+  >> HO_MATCH_MP_TAC integrationTheory.FUNDAMENTAL_THEOREM_OF_CALCULUS
+  >> rw [IN_INTERVAL]
+  >> MATCH_MP_TAC HAS_VECTOR_DERIVATIVE_AT_WITHIN
+  >> REWRITE_TAC [has_vector_derivative_x_quartic_normal_density]
+QED
+
+Theorem HAS_INTEGRAL_ADD'[local]:
+    ∀f g s k l.
+      (f has_integral k) s ∧ (g has_integral l) s ⇒
+      ((λx. f x + g x) has_integral k + l) s
+Proof
+  METIS_TAC [integrationTheory.HAS_INTEGRAL_ADD]
+QED
+
 Theorem has_integral_x_quartic_std_normal_density :
   !a b. 0 <= a /\ a <= b ==>
         ((λx. x pow 4 * std_normal_density x)
@@ -1975,7 +2040,32 @@ Theorem has_integral_x_quartic_std_normal_density :
           (a pow 3 + 3 * a) * std_normal_density a -
           (b pow 3 + 3 * b) * std_normal_density b)) (interval [a,b])
 Proof
-  cheat
+    rpt STRIP_TAC
+ >> Q.ABBREV_TAC ‘r1 = \x. x pow 4 * std_normal_density x - 3 * std_normal_density x’
+ >> Q.ABBREV_TAC ‘r2 = \x. 3 * std_normal_density x’
+ >> ‘∀x. (x pow 4 * std_normal_density x) = r1 x + r2 x’ by (rw [Abbr ‘r1’, Abbr ‘r2’] >> REAL_ARITH_TAC)
+ >> POP_ORW
+ >> MP_TAC (Q.SPECL [‘r1’, ‘r2’, ‘interval [(a,b)]’,
+                     ‘-(b³ + 3 * b) * std_normal_density b −
+                      -(a³ + 3 * a) * std_normal_density a’,
+                     ‘3 * integral (interval [a,b]) std_normal_density’] HAS_INTEGRAL_ADD')
+ >> rw [has_integral_x_quartic_std_normal_density_minus_3, has_integral_3_mul_std_normal_density_interval]
+ >> Suff ‘(r1 has_integral
+           -(b³ + 3 * b) * std_normal_density b −
+           -(a³ + 3 * a) * std_normal_density a) (interval [(a,b)]) ∧
+           (r2 has_integral 3 * integral (interval [(a,b)]) std_normal_density)
+           (interval [(a,b)])’
+ >- (rw [] >> fs [] \\
+     ‘-(b³ + 3 * b) * std_normal_density b −
+      -(a³ + 3 * a) * std_normal_density a +
+      3 * integral (interval [(a,b)]) std_normal_density =
+      3 * integral (interval [(a,b)]) std_normal_density +
+      (a³ + 3 * a) * std_normal_density a −
+      (b³ + 3 * b) * std_normal_density b’ by REAL_ARITH_TAC \\
+     POP_ASSUM (rw o wrap o SYM))
+ >> POP_ASSUM K_TAC
+ >> rw [Abbr ‘r1’, Abbr ‘r2’, has_integral_x_quartic_std_normal_density_minus_3,
+        has_integral_3_mul_std_normal_density_interval]
 QED
 
 Theorem integrable_std_normal_quartic :
