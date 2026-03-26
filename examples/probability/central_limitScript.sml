@@ -1897,13 +1897,74 @@ Proof
  >> simp []
 QED
 
-Theorem integral_indicator_std_normal_density :
-  ∀n.
-    integral 𝕌(:real)
-             (λx. indicator (interval [(0,&n)]) x * std_normal_density x) =
-    integral (interval [(0,&n)]) std_normal_density
+Theorem REAL_SUB_LE_SELF :
+  ∀a (b :real). 0 ≤ b ⇒ a - b ≤ a
 Proof
-  cheat
+  REAL_ARITH_TAC
+QED
+
+Theorem integral_indicator_interval :
+    ∀f a b.
+      integral 𝕌(:real) (λx. indicator (interval [(a,b)]) x * f x) =
+      integral (interval [(a,b)]) f
+Proof
+  rpt STRIP_TAC
+  >> MP_TAC (Q.SPECL [‘f’, ‘interval [(a,b)]’] integrationTheory.INTEGRAL_RESTRICT_UNIV)
+  >> STRIP_TAC
+  >> POP_ASSUM (rw o wrap o SYM)
+  >> Suff ‘∀(x :real). f x * indicator (interval [(a,b)]) x = if x ∈ interval [(a,b)] then f x else 0’
+  >> rw [IN_INTERVAL, indicator, GSYM interval]
+QED
+
+
+Theorem integral_indicator_std_normal_density :
+    ∀n. integral 𝕌(:real)
+                      (λx. indicator (interval [(0,&n)]) x * std_normal_density x) =
+             integral (interval [(0,&n)]) std_normal_density
+Proof
+  METIS_TAC [integral_indicator_interval]
+QED
+
+Theorem integrable_on_univ_std_normal_density :
+    !p N. prob_space p /\ std_normal_rv N p ==> std_normal_density integrable_on 𝕌(:real)
+Proof
+    rpt STRIP_TAC
+ >> irule (cj 1 lebesgue_eq_gauge_integral_positive)
+ >> simp [normal_density_nonneg]
+ >> reverse CONJ_TAC >- (METIS_TAC [in_borel_measurable_std_normal_density, GSYM ETA_AX])
+ >> (MP_TAC o (Q.SPECL [‘lborel’, ‘Normal ∘ std_normal_density’]) o
+            (INST_TYPE [alpha |-> “:real”])) integral_pos_fn
+ >> rw [o_DEF, measure_space_lborel, normal_density_nonneg]
+ >> POP_ASSUM (rw o wrap o SYM)
+ >> MP_TAC (Q.SPECL [‘p’, ‘N’, ‘0’, ‘1’] (cj 2 integral_normal_density))
+ >> rw [extreal_1_simps]
+QED
+
+Theorem integral_std_normal_density_interval_le_1 :
+    !p N. prob_space p /\ std_normal_rv N p ==>
+          (∀a b. a <= b ⇒
+                 integral (interval [a,b]) std_normal_density <= 1)
+Proof
+    rpt STRIP_TAC
+ >> MP_TAC (Q.SPECL [‘p’, ‘N’, ‘0’, ‘1’] integral_normal_density)
+ >> rw []
+ >> Suff ‘Normal (integral (interval [(a,b)]) std_normal_density) ≤ 1’
+ >- (rw [extreal_le_eq])
+ >> Suff ‘ Normal (integral (interval [(a,b)]) std_normal_density) ≤ ∫ lborel (λx. Normal_density 0 1 x)’
+ >- (rw [])
+    >> POP_ASSUM K_TAC
+    >> ‘std_normal_density integrable_on 𝕌(:real)’ by METIS_TAC [integrable_on_univ_std_normal_density]
+ >> MP_TAC (Q.SPEC ‘std_normal_density’ (cj 2 lebesgue_eq_gauge_integral_alt))
+ >> impl_tac
+ >- (CONJ_TAC >- (METIS_TAC [in_borel_measurable_std_normal_density, GSYM ETA_AX]) \\
+     irule integrationTheory.NONNEGATIVE_ABSOLUTELY_INTEGRABLE \\
+     rw [normal_density_nonneg])
+ >> rw [o_DEF]
+ >> irule integrationTheory.INTEGRAL_SUBSET_COMPONENT_LE
+ >> rw [normal_density_nonneg]
+ >> irule integrationTheory.INTEGRABLE_ON_SUBINTERVAL
+ >> qexists ‘UNIV’
+ >> rw []
 QED
 
 Theorem has_integral_x_quartic_std_normal_density :
@@ -1917,54 +1978,27 @@ Proof
   cheat
 QED
 
-Theorem REAL_SUB_LE_SELF :
-  ∀a (b :real). 0 ≤ b ⇒ a - b ≤ a
+Theorem integrable_std_normal_quartic :
+    !p N. prob_space p /\ std_normal_rv N p ==>
+          integrable lborel (\x. Normal (x pow 4 * std_normal_density x))
 Proof
-  REAL_ARITH_TAC
-QED
-
-Theorem integrable_std_normal_density:
-    integrable lborel (λx. Normal_density 0 1 x)
-Proof
-  (MP_TAC o (Q.SPECL [‘0’, ‘1’]) o
-          (INST_TYPE [alpha |-> “:real”])) (cj 1 integral_normal_density') >> rw []
-  >> cheat
-QED
-
-
-
-Theorem integral_std_normal_density_interval_le_1 :
-  ∀a b. a <= b ⇒
-        integral (interval [a,b]) std_normal_density <= 1
-Proof
-  rpt STRIP_TAC
-  >> MP_TAC (Q.SPEC ‘std_normal_density’ lebesgue_eq_gauge_integral)
-  >> rw [o_DEF]
-  >> cheat
-QED
-
-Theorem integrable_std_normal_abs_quartic :
-    integrable lborel (\x. Normal ((abs x) pow 4 * std_normal_density x))
-Proof
-     qabbrev_tac ‘f = \x. (abs x) pow 4 * std_normal_density x’
+    rpt STRIP_TAC
+ >> qabbrev_tac ‘f = \x. x pow 4 * std_normal_density x’ >> fs []
+ >> ‘∀(x :real). 0 ≤ x pow 4’ by rw [REAL_POW_GE0]
  >> Know ‘!x. 0 <= f x’
  >- (rw [Abbr ‘f’] \\
      MATCH_MP_TAC REAL_LE_MUL \\
-     simp [normal_density_nonneg, ABS_POS, REAL_POW_LE])
+     simp [normal_density_nonneg, REAL_POW_LE])
  >> DISCH_TAC
  >> Know ‘f IN borel_measurable borel’
  >- (qunabbrev_tac ‘f’ \\
      MATCH_MP_TAC in_borel_measurable_mul \\
-     qexistsl_tac [‘\x. (abs x) pow 4’, ‘std_normal_density’] \\
+     qexistsl_tac [‘\x. x pow 4’, ‘std_normal_density’] \\
      simp [space_borel, sigma_algebra_borel] \\
      REWRITE_TAC [in_measurable_borel_normal_density] \\
      MATCH_MP_TAC in_borel_measurable_pow \\
-     qexistsl [‘4’, ‘λx. abs x’] \\
-     simp [space_borel, sigma_algebra_borel] \\
-     (* (λx. abs x) ∈ borel_measurable borel *)
-     MATCH_MP_TAC in_measurable_borel_comp_borel \\
-     qexistsl [‘abs’, ‘λx. x’] \\
-     simp [in_borel_measurable_I, in_measurable_borel_borel_abs])
+     qexistsl [‘4’, ‘λx. x’] \\
+     simp [space_borel, sigma_algebra_borel, in_borel_measurable_I])
  >> DISCH_TAC
  >> simp []
  >> ‘(\x. Normal (f x)) = Normal o f’ by rw [FUN_EQ_THM, o_DEF] >> POP_ORW
@@ -2110,10 +2144,11 @@ Proof
      CONJ_TAC >- simp [Abbr ‘s’, Once EXTENSION] \\
      rw [Abbr ‘s’, bounded_def] \\
      Q.EXISTS_TAC ‘3’ >> rw [Abbr ‘J’] \\
-
-     ‘integral (interval [(0,&i)]) std_normal_density ≤ 1’ by simp [integral_std_normal_density_interval_le_1] \\
-
-
+     Know ‘integral (interval [(0,&i)]) std_normal_density ≤ 1’
+     >- (irule integral_std_normal_density_interval_le_1 \\
+         rw [REAL_POS] \\
+         qexistsl_tac [‘N’, ‘p’] >> rw []) \\
+     DISCH_TAC \\
      Know ‘abs (3 * integral (interval [(0,&i)]) std_normal_density −
                              ((&i)³ + &(3 * i)) * std_normal_density (&i)) =
            3 * integral (interval [(0,&i)]) std_normal_density −
@@ -2133,25 +2168,6 @@ Proof
      MATCH_MP_TAC REAL_LE_ADD >> simp [REAL_POS])
  >> Rewr'
  >> simp []
-QED
-
-Theorem integrable_std_normal_quartic :
-    integrable lborel (\x. Normal (x pow 4 * std_normal_density x))
-Proof
-    MATCH_MP_TAC integrable_from_abs
- >> simp [extreal_abs_def, o_DEF, ABS_MUL, GSYM POW_ABS, lborel_def,
-          normal_density_nonneg, ABS_REDUCE, integrable_std_normal_abs_quartic]
- >> ‘(\x. Normal (x pow 4 * std_normal_density x)) =
-     Normal o (\x. x pow 4 * std_normal_density x)’ by rw [o_DEF, FUN_EQ_THM]
- >> POP_ORW
- >> MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL'
- >> simp [sigma_algebra_borel]
- >> MATCH_MP_TAC in_borel_measurable_mul
- >> qexistsl_tac [‘\x. x pow 4’, ‘std_normal_density’]
- >> rw [in_measurable_borel_normal_density, space_borel, sigma_algebra_borel]
- >> MATCH_MP_TAC in_borel_measurable_pow
- >> qexistsl_tac [‘4’, ‘\x. x’]
- >> rw [space_borel, sigma_algebra_borel, in_borel_measurable_I]
 QED
 
 Theorem in_measurable_borel_not_sing :
