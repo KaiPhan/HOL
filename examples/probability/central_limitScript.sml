@@ -6955,6 +6955,18 @@ Proof
     by PROVE_TAC [finite_second_moments_eq_finite_variance]
 
   >> Q.ABBREV_TAC ‘Y = \i x. X i x - expectation p (X i)’
+  >> Know ‘∀n. real_random_variable (Y n) p’
+  >- (rw [Abbr ‘Y’] \\
+      HO_MATCH_MP_TAC real_random_variable_sub >> gvs [] \\
+      CONJ_TAC >- (METIS_TAC[]) \\
+      MATCH_MP_TAC real_random_variable_const >> fs [] \\
+      METIS_TAC [integrable_finite_integral, prob_space_def, expectation_def, extreal_cases])
+  >> DISCH_TAC
+  >> ‘∀n. real_random_variable (λx. abs (Y n x)) p’ by METIS_TAC [real_random_variable_abs]
+  >> Know ‘∀n. expectation p (λx. (abs (Y n x))³) < +∞’
+  >- (cheat)
+  >> DISCH_TAC
+      
   >> Know ‘CLT p Y N’
   >- (irule CLT_Lyapunov \\
       simp [] \\
@@ -6967,89 +6979,30 @@ Proof
           Know ‘variance p (λx. X n x − Normal r) = variance p (λx. X n x)’
           >- (HO_MATCH_MP_TAC variance_real_affine' \\
               METIS_TAC []) >> Rewr' \\
-          METIS_TAC []
-
-
-
-
-       )
-
-
-
-
-
+          METIS_TAC []) \\
+      CONJ_TAC >- (rw [Abbr ‘Y’] \\
+                   irule expectation_center >> METIS_TAC []) \\
+      CONJ_TAC >- (rw [GSYM pow_abs, GSYM o_DEF] \\
+                   irule integrable_abs >> fs [prob_space_def] \\
+                   irule (cj 3 clt_integrable_lemma) >> art [prob_space_def]) \\
+      CONJ_TAC >- (rw [Abbr ‘Y’] \\
+                   (MP_TAC o (Q.SPECL [‘p’, ‘(X :num -> α -> extreal)’, ‘λi. Borel’, ‘count n’,
+                                       ‘λ(i:num) (y :extreal). y − expectation p (X i)’]) o
+                           (INST_TYPE [“:'index” |-> “:num”, beta |-> “:extreal”])) indep_vars_cong \\
+                   impl_tac >- (fs [real_random_variable_def] \\
+                                Q.X_GEN_TAC ‘i’ >> rw [] \\
+                                irule IN_MEASURABLE_BOREL_SUB' >> simp [SIGMA_ALGEBRA_BOREL] \\
+                                qexistsl [‘λx. x’, ‘λx. expectation p (X i)’] \\
+                                fs [IN_MEASURABLE_BOREL_BOREL_I] \\
+                                irule IN_MEASURABLE_BOREL_CONST \\
+                                simp [SIGMA_ALGEBRA_BOREL] \\
+                                qexists ‘expectation p (X i)’ >> fs []) \\
+                   fs [o_DEF] \\
+                   cheat)
 
      )
-  >> DISCH_TAC
-
-  >> fs [CLT_def, Abbr ‘Y’]
-
-  >> Know
-     ‘expectation p
-      (\x. SIGMA (\i. X i x - expectation p (X i)) (count1 n)) =
-      SIGMA
-      (\i. expectation p (\x. X i x - expectation p (X i)))
-      (count1 n)’
-  >- (cheat)
-  >> DISCH_TAC
-
-
-
-
-  >> fs []
-
-  RW_TAC std_ss [CLT_def]
-  >> Know ‘!i. integrable p (\x. (X i x) pow 2)’
-  >- (Q.X_GEN_TAC ‘i’ \\
-      irule integrable_absolute_moments_mono >> art [] \\
-      Q.EXISTS_TAC ‘3’ >> simp [])
-  >> DISCH_TAC
-  >> ‘!i. finite_second_moments p (X i)’
-    by METIS_TAC [finite_second_moments_eq_integrable_square]
-  >> ‘!i. variance p (X i) < PosInf’
-    by PROVE_TAC [finite_second_moments_eq_finite_variance]
-  >> rw [Abbr ‘Z’]
-  >> irule central_limit_theorem
-
-
-
-      MP_TAC (Q.SPECL [‘p’, ‘λn x. (X :num -> α -> extreal) (n :num) x - expectation p (X n x)’, ‘N’] CLT_Lyapunov)
-
-
-
-
-
-  >> irule CLT_Lyapunov >> rw []
-  cheat
-QED
-
-
-
-
-Definition CLT_def :
-  CLT p X N =
-  let Z n x = SIGMA (λi. X i x) (count (SUC n)) in
-    ((\n x. (Z n x - expectation p (Z n)) /
-                                          sqrt (second_moments p X (SUC n))) --> N)
-    (in_distribution p)
-End
-
-Theorem central_limit_theorem :
-  !p X N.
-    prob_space p /\ ext_normal_rv N p 0 1 /\
-    (!i. real_random_variable (X i) p) /\
-    (!n. indep_vars p X (λi. Borel) (count n)) /\
-    (!n. integrable p (\x. (abs (X n x)) pow 3)) /\
-    (!n. variance p (X n) <> 0) /\
-    ((\n. absolute_third_moments p X (SUC n) /
-                                 sqrt (second_moments p X (SUC n)) pow 3) --> 0) sequentially ==>
-    CLT p X N
-Proof
-  rpt STRIP_TAC
-  >> HO_MATCH_MP_TAC CLT_Lyapunov
-
-
-
+      
+  >> cheat
 QED
 
 val _ = html_theory "central_limit";
