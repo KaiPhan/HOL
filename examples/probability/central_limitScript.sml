@@ -6931,6 +6931,40 @@ Proof
  >> METIS_TAC [expectation_const, extreal_sub_eq, REAL_SUB_REFL, extreal_0_simps]
 QED
 
+Theorem abs_sub_pow3_bound[local]:
+   ∀a b.
+     a ≠ −∞ ∧ a ≠ +∞ ∧ b ≠ −∞ ∧ b ≠ +∞ ⇒
+     (abs (a − b))³ ≤ 4 * (abs a)³ + 4 * (abs b)³
+Proof  
+    rpt STRIP_TAC
+ >> ‘∃c. a = Normal c’ by METIS_TAC [extreal_cases]
+ >> ‘∃d. b = Normal d’ by METIS_TAC [extreal_cases]
+ >> simp [extreal_abs_def, extreal_sub_eq, extreal_pow_def]
+ >> simp [GSYM add_ldistrib, extreal_add_eq]
+ >> simp [extreal_of_num_def, extreal_mul_eq]
+ >> ‘abs (c - d) ≤ abs c + abs d’ by REAL_ARITH_TAC
+ >> ‘0 ≤ abs (c − d) ∧ 0 ≤ abs c ∧ 0 ≤ abs d’ by REAL_ARITH_TAC
+ >> ‘abs (c − d) pow 3 ≤ (abs c + abs d) pow 3’ by METIS_TAC [POW_LE]  
+ >> MATCH_MP_TAC REAL_LE_TRANS
+ >> qexists ‘(abs c + abs d) pow 3’ >> simp []
+ >> Q.ABBREV_TAC ‘u = abs c’ 
+ >> Q.ABBREV_TAC ‘v = abs d’
+ >> ‘(u + v)³ = u³ + 3 * u² * v + 3 * u * v² + v³’ by REAL_ARITH_TAC
+ >> POP_ORW
+ >> ‘ u³ + 3 * u² * v + 3 * u * v² + v³ ≤ 4 * (u³ + v³) ⇔
+        0 ≤ 4 * (u³ + v³) - (u³ + 3 * u² * v + 3 * u * v² + v³)’ by REAL_ARITH_TAC
+ >> POP_ORW
+ >> ‘4 * (u³ + v³) − (u³ + 3 * u² * v + 3 * u * v² + v³) =
+     3 * (u³ − u² * v − u * v² + v³)’ by REAL_ARITH_TAC
+ >> POP_ORW
+ >> ‘u³ − u² * v − u * v² + v³ = (u + v) * (u − v)²’ by REAL_ARITH_TAC
+ >> POP_ORW
+ >> MATCH_MP_TAC REAL_LE_MUL >> simp []
+ >> MATCH_MP_TAC REAL_LE_MUL >> simp []
+ >> MATCH_MP_TAC REAL_LE_ADD >> simp []
+QED
+  
+
 Theorem CLT_Lyapunov':
     !p X N. prob_space p /\ ext_normal_rv N p 0 1 /\
             (!n. real_random_variable (X n) p) /\
@@ -6953,7 +6987,6 @@ Proof
     by METIS_TAC [finite_second_moments_eq_integrable_square]
   >> ‘!i. variance p (X i) < PosInf’
     by PROVE_TAC [finite_second_moments_eq_finite_variance]
-
   >> Q.ABBREV_TAC ‘Y = \i x. X i x - expectation p (X i)’
   >> Know ‘∀n. real_random_variable (Y n) p’
   >- (rw [Abbr ‘Y’] \\
@@ -6964,9 +6997,35 @@ Proof
   >> DISCH_TAC
   >> ‘∀n. real_random_variable (λx. abs (Y n x)) p’ by METIS_TAC [real_random_variable_abs]
   >> Know ‘∀n. expectation p (λx. (abs (Y n x))³) < +∞’
-  >- (cheat)
-  >> DISCH_TAC
-      
+  >- (Q.X_GEN_TAC ‘i’ \\
+      MP_TAC (Q.SPECL [‘p’, ‘Y (i :num)’, ‘3’] (GSYM expectation_finite_eq_integrable)) \\
+      fs [] >> Rewr \\
+      rw [Abbr ‘Y’] \\
+      irule integrable_bounded >> fs [prob_space_def] \\
+      CONJ_TAC >- (HO_MATCH_MP_TAC IN_MEASURABLE_BOREL_POW \\
+                   HO_MATCH_MP_TAC IN_MEASURABLE_BOREL_ABS \\
+                   qexists ‘λx. X i x − expectation p (X i)’ \\
+                   fs [MEASURE_SPACE_SIGMA_ALGEBRA] \\
+                   irule IN_MEASURABLE_BOREL_SUB' \\
+                   fs [MEASURE_SPACE_SIGMA_ALGEBRA] \\
+                   qexistsl [‘λx. X i x’, ‘λx.  expectation p (X i)’] \\
+                   fs [IN_MEASURABLE_BOREL_CONST', MEASURE_SPACE_SIGMA_ALGEBRA,
+                       real_random_variable, p_space_def, events_def] \\
+                   METIS_TAC []) \\
+      qexists ‘λx. 4 * (abs (X i x))³ + 4 * (abs (expectation p (X i)))³’ \\
+      CONJ_TAC >- (rw [abs_abs, pow_abs] \\
+                   HO_MATCH_MP_TAC abs_sub_pow3_bound \\
+                   fs [real_random_variable, expectation_def] \\
+                   METIS_TAC [integrable_finite_integral, p_space_def]) \\
+      HO_MATCH_MP_TAC integrable_add' >> simp [] \\
+      CONJ_TAC >- (METIS_TAC [integrable_cmul, extreal_of_num_def]) \\
+      ‘expectation p (X i) ≠ PosInf ∧ expectation p (X i) ≠ NegInf’
+        by METIS_TAC [integrable_finite_integral, prob_space_def,
+                      expectation_def, extreal_cases] \\
+      ‘∃r. expectation p (X i) = Normal r’ by METIS_TAC [extreal_cases] \\
+      rw [extreal_abs_def, extreal_mul_eq, extreal_of_num_def, extreal_pow_def] \\
+      irule integrable_const >> fs [extreal_1_simps])
+  >> DISCH_TAC      
   >> Know ‘CLT p Y N’
   >- (irule CLT_Lyapunov \\
       simp [] \\
@@ -6997,11 +7056,9 @@ Proof
                                 irule IN_MEASURABLE_BOREL_CONST \\
                                 simp [SIGMA_ALGEBRA_BOREL] \\
                                 qexists ‘expectation p (X i)’ >> fs []) \\
-                   fs [o_DEF] \\
-                   cheat)
-
-     )
-      
+                   fs [o_DEF]) \\
+      cheat)
+  >> rw [CLT_def]   
   >> cheat
 QED
 
