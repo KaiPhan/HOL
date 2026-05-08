@@ -6965,6 +6965,25 @@ Proof
 QED
   
 
+Theorem converge_in_dist_cong_full:
+    ∀p X Y A B m.
+      (∀n x. m ≤ n ∧ x ∈ p_space p ⇒ X n x = Y n x) ∧
+      (∀x. x ∈ p_space p ⇒ A x = B x) ⇒
+      ((X ⟶ A) (in_distribution p) ⇔ (Y ⟶ B) (in_distribution p))
+Proof
+  cheat
+QED
+  
+Theorem converge_in_dist_cong:
+  ∀p X Y Z m.
+    (∀n x. m ≤ n ∧ x ∈ p_space p ⇒ X n x = Y n x) ⇒
+    ((X ⟶ Z) (in_distribution p) ⇔ (Y ⟶ Z) (in_distribution p))
+Proof
+  cheat
+QED
+
+
+  
 Theorem CLT_Lyapunov':
     !p X N. prob_space p /\ ext_normal_rv N p 0 1 /\
             (!n. real_random_variable (X n) p) /\
@@ -7058,7 +7077,17 @@ Proof
                                 qexists ‘expectation p (X i)’ >> fs []) \\
                    fs [o_DEF]) \\
       cheat)
-  >> rw [CLT_def]   
+  >> rw [CLT_def]
+  >> Q.ABBREV_TAC ‘A = (λn x.
+                          (∑ (λi. Y i x) (count1 n) −
+                             expectation p (λx. ∑ (λi. Y i x) (count1 n))) /
+                       sqrt (second_moments p Y (SUC n))) ’
+  >> Q.ABBREV_TAC ‘B = (λn x.
+                          (∑ (λi. X i x) (count1 n) −
+                             expectation p (λx. ∑ (λi. X i x) (count1 n))) /
+                             sqrt (second_moments p X (SUC n)))’
+                                                                           
+  >> MP_TAC (Q.SPECL [‘p’, ‘’] converge_in_dist_cong)
   >> cheat
 QED
 
