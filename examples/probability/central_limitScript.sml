@@ -7120,9 +7120,12 @@ Proof
  >> Cases_on ‘n = 1’ >> simp [abs_expectation_le_expectation_abs]
  >> ‘1 < n’ by simp []
  >> MP_TAC (Q.SPECL [‘p’, ‘X’, ‘Normal 1’, ‘Normal (&n)’] Lyapunov_ineq_rv)
- >> impl_tac
-        
- >- (fs [] >> cheat)
+ >> impl_tac        
+ >- (gvs [normal_1, GSYM extreal_of_num_def] \\
+     fs [L1_space_alt_integrable, prob_space_def] \\
+     fs [lp_space_def, real_random_variable, events_def, p_space_def] \\
+     ‘∀x. abs (X x) powr &n = abs (X x) pow n’ by METIS_TAC [abs_pos, gen_powr] >> POP_ORW \\
+     gvs [integrable_alt_def, abs_abs, o_DEF, pos_fn_integral_pos, integral_pos_fn, pow_abs, pow_pos_le])
  >> rw [seminorm_def, expectation_def, GSYM extreal_of_num_def, powr_1, abs_pos, inv_one]
  >> MATCH_MP_TAC le_trans
  >> qexists ‘(∫ p (λx. abs (X x))) pow n’
