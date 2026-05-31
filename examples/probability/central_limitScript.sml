@@ -6978,12 +6978,6 @@ Proof
  >> MATCH_MP_TAC REAL_LE_ADD >> simp []
 QED
 
-Theorem abs_add_pow3_bound[local]:
-  ∀a b. 0 ≤ a ∧ 0 ≤ b ∧ a ≠ +∞ ∧ b ≠ +∞ ⇒ (a + b)³ ≤ 4 * (a³ + b³)
-Proof
-    cheat    
-QED
-
 Theorem converge_in_dist_cong_full:
     ∀p X Y A B m.
       prob_space p ∧
@@ -7033,7 +7027,6 @@ Proof
  >> CONJ_TAC >- (REAL_ARITH_TAC)
  >> METIS_TAC [ABS_REFL]
 QED
-
 
 Theorem lim_sequentially_bound :
     ∀f g.
@@ -7122,8 +7115,43 @@ Theorem abs_expectation_pow_le_expectation_abs_pow :
       prob_space p ∧ real_random_variable X p ∧ integrable p X ∧
       0 < n ∧ integrable p (λx. (abs (X x)) pow n) ⇒
       (abs (expectation p X)) pow n ≤ expectation p (λx. (abs (X x)) pow n)
-Proof
-  cheat
+Proof  
+    rpt STRIP_TAC
+ >> Cases_on ‘n = 1’ >> simp [abs_expectation_le_expectation_abs]
+ >> ‘1 < n’ by simp []
+ >> MP_TAC (Q.SPECL [‘p’, ‘X’, ‘Normal 1’, ‘Normal (&n)’] Lyapunov_ineq_rv)
+ >> impl_tac
+        
+ >- (fs [] >> cheat)
+ >> rw [seminorm_def, expectation_def, GSYM extreal_of_num_def, powr_1, abs_pos, inv_one]
+ >> MATCH_MP_TAC le_trans
+ >> qexists ‘(∫ p (λx. abs (X x))) pow n’
+ >> CONJ_TAC >- (irule pow_le \\
+                 METIS_TAC [GSYM expectation_def, abs_expectation_le_expectation_abs, abs_pos])
+ >> gvs [powr_1, pos_fn_integral_pos, prob_space_def, p_space_def, abs_pos]
+ >> ‘∫⁺ p (λx. abs (X x)) = ∫ p (λx. abs (X x))’
+   by (irule (GSYM integral_pos_fn) >> METIS_TAC [abs_pos, ETA_AX])
+ >> ‘∀x. abs (X x) powr &n = abs (X x) pow n’ by METIS_TAC [abs_pos, gen_powr]
+ >> gvs []
+ >> ‘∫⁺ p (λx. abs (X x) pow n) = ∫ p (λx. abs (X x) pow n)’
+   by (irule (GSYM integral_pos_fn) >> METIS_TAC [abs_pos, ETA_AX, pow_pos_le])
+ >> gvs []
+ >> NTAC 3 (POP_ASSUM K_TAC)
+ >> Q.ABBREV_TAC ‘A = ∫ p (λx. abs (X x))’
+ >> Q.ABBREV_TAC ‘B = ∫ p (λx. abs (X x) pow n)’
+ >> MP_TAC (Q.SPECL [‘n’, ‘A’, ‘ B powr (&n)⁻¹’] pow_le)
+ >> impl_tac >- (gvs [Abbr ‘A’, Abbr ‘B’] \\
+                 gvs [integral_pos, abs_pos, pow_pos_le, powr_pos])
+ >> ‘0 ≤ B’ by gvs [Abbr ‘B’, integral_pos, abs_pos, pow_pos_le]
+ >> ‘0 ≤ B powr (&n)⁻¹’ by gvs [powr_pos]
+ >> ‘(B powr (&n)⁻¹) pow n = (B powr (&n)⁻¹) powr (&n)’ by gvs [gen_powr]
+ >> Know ‘(B powr (&n)⁻¹) powr (&n) = B’
+ >- (‘0 < &n’ by gvs [] \\
+     ‘0 < inv (&n)’ by gvs [inv_pos'] \\
+     ‘(B powr (&n)⁻¹) powr &n = B powr ((&n)⁻¹ * (&n))’
+       by (irule powr_powr >> gvs [num_not_infty, inv_not_infty, lt_imp_ne]) \\
+     POP_ORW >> gvs [mul_linv_pos, powr_1])
+ >> gvs []         
 QED
                   
 Theorem absolute_third_moments_center_bound:
