@@ -6979,14 +6979,10 @@ Proof
 QED
 
 Theorem abs_add_pow3_bound[local]:
-  ∀a b.
-    a ≠ −∞ ∧ a ≠ +∞ ∧ b ≠ −∞ ∧ b ≠ +∞ ⇒
-    (a + b)³ ≤ 4 * (a³ + b³)
+  ∀a b. 0 ≤ a ∧ 0 ≤ b ∧ a ≠ +∞ ∧ b ≠ +∞ ⇒ (a + b)³ ≤ 4 * (a³ + b³)
 Proof
-  cheat
+    cheat    
 QED
-
-
 
 Theorem converge_in_dist_cong_full:
     ∀p X Y A B m.
@@ -7089,8 +7085,47 @@ val clt_integrable_sub_const_i =
      rw [extreal_abs_def, extreal_mul_eq, extreal_of_num_def, extreal_pow_def] \\
 irule integrable_const >> fs [extreal_1_simps];
 
-
-
+Theorem neg_abs_le:
+    ∀(a:extreal). -abs a ≤ a
+Proof
+    METIS_TAC [le_abs, le_neg, neg_neg]
+QED
+  
+Theorem abs_expectation_le_expectation_abs:
+    ∀p X.
+      prob_space p ∧ real_random_variable X p ∧ integrable p X ⇒
+      abs (expectation p X) ≤ expectation p (λx. abs (X x))
+Proof
+    rpt STRIP_TAC
+ >> MP_TAC (Q.SPECL [‘expectation p X’, ‘expectation p (λx. abs (X x))’] abs_bounds)
+ >> Rewr
+ >> CONJ_TAC
+ >- (‘-expectation p (λx. abs (X x)) = -1 * expectation p (λx. abs (X x))’ by METIS_TAC [neg_minus1] \\
+     POP_ORW \\
+     ‘-1 = Normal (-1)’ by METIS_TAC [extreal_ainv_def, GSYM extreal_of_num_def] \\
+     POP_ORW \\
+     ‘Normal (-1) * expectation p (λx. abs (X x)) = expectation p (λx. Normal (-1) * abs (X x))’
+       by (HO_MATCH_MP_TAC (GSYM expectation_cmul) \\
+           METIS_TAC [integrable_abs, o_DEF, prob_space_def]) \\
+     POP_ORW \\
+     HO_MATCH_MP_TAC expectation_mono >> fs [] \\
+     CONJ_TAC >- (HO_MATCH_MP_TAC integrable_cmul >> METIS_TAC [integrable_abs, o_DEF, prob_space_def]) \\
+     ‘Normal (-1) = -1’ by METIS_TAC [extreal_ainv_def, GSYM extreal_of_num_def] \\
+     rw [GSYM neg_minus1, neg_abs_le])
+ >> HO_MATCH_MP_TAC expectation_mono >> fs []
+ >> CONJ_TAC >- (METIS_TAC [integrable_abs, o_DEF, prob_space_def])
+ >> rw [cj 1 le_abs]
+QED
+  
+Theorem abs_expectation_pow_le_expectation_abs_pow :
+    ∀p X (n :num).
+      prob_space p ∧ real_random_variable X p ∧ integrable p X ∧
+      0 < n ∧ integrable p (λx. (abs (X x)) pow n) ⇒
+      (abs (expectation p X)) pow n ≤ expectation p (λx. (abs (X x)) pow n)
+Proof
+  cheat
+QED
+                  
 Theorem absolute_third_moments_center_bound:
     ∀p X n. prob_space p ∧ (∀i. real_random_variable (X i) p) ∧
             (∀i. integrable p (λx. (abs (X i x))³)) ∧
@@ -7098,160 +7133,70 @@ Theorem absolute_third_moments_center_bound:
             absolute_third_moments p (λi x. X i x − expectation p (X i)) n
             ≤ 8 * absolute_third_moments p X n
 Proof
-
-  rw [absolute_third_moments_def, absolute_moment_def, absolute_third_moment_def]
-  >> Know ‘∀i. integrable p (λx. (abs (X i x − expectation p (X i)))³)’
-  >- (Q.X_GEN_TAC ‘i’ >> clt_integrable_sub_const_i)
-  >> DISCH_TAC
-  >> Know ‘∀i. integrable p (λx. (abs (X i x))³ + (abs (expectation p (X i)))³)’
-  >- (Q.X_GEN_TAC ‘i’ \\
-      HO_MATCH_MP_TAC integrable_add' >> fs [prob_space_def] \\
-      ‘expectation p (X i) ≠ PosInf ∧ expectation p (X i) ≠ NegInf’
-        by METIS_TAC [integrable_finite_integral, prob_space_def,
-                      expectation_def, extreal_cases] \\
-      ‘∃r. expectation p (X i) = Normal r’ by METIS_TAC [extreal_cases] \\
-      gvs [pow_abs, extreal_abs_def, extreal_pow_def, integrable_const])
-  >> DISCH_TAC
-  >> Know ‘∀i. integrable p (λx. Normal 4 * (abs (X i x))³ +
-                                 Normal 4 * (abs (expectation p (X i)))³)’
-  >- (Q.X_GEN_TAC ‘i’ \\
-      gvs [GSYM add_ldistrib_pos, abs_pos, GSYM pow_abs] \\
-      HO_MATCH_MP_TAC integrable_cmul >> fs [prob_space_def])
-  >> DISCH_TAC
-  >> (MP_TAC o (Q.SPECL [‘count n’]) o
-             (INST_TYPE [alpha |-> ``:num``])) (GSYM EXTREAL_SUM_IMAGE_CMUL)
-  >> rw [extreal_of_num_def]
-  >> POP_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [‘λi. expectation p (λx. (abs (X i x))³)’, ‘8’])
-  >> ‘(∀x. x < n ⇒ (λi. expectation p (λx. (abs (X i x))³)) x ≠ −∞)’
-    by METIS_TAC [cj 2 integrable_imp_finite_expectation] >> gvs []
-  >> HO_MATCH_MP_TAC EXTREAL_SUM_IMAGE_MONO' >> simp []
-  >> Q.X_GEN_TAC ‘i’ >> STRIP_TAC
-  >> MATCH_MP_TAC le_trans
-  >> qexists ‘expectation p
-              (λx. Normal 4 * (abs (X i x))³ +
-                   Normal 4 * (abs (expectation p (X i)))³)’
-  >> CONJ_TAC
-  >- (irule expectation_mono >> gvs [GSYM extreal_of_num_def] \\
-      Q.X_GEN_TAC ‘x’ >> STRIP_TAC \\
-      HO_MATCH_MP_TAC abs_sub_pow3_bound \\
-      METIS_TAC [real_random_variable, integrable_imp_finite_expectation])
-
-  >> Know ‘expectation p
-           (λx.
-              Normal 4 * (abs (X i x))³ +
-              Normal 4 * (abs (expectation p (X i)))³) =
-           Normal 4 * expectation p (λx. (abs (X i x))³) +
-           Normal 4 * (abs (expectation p (X i)))³’
-
-  >- (gvs [expectation_cmul, GSYM add_ldistrib_pos, expectation_pos, abs_pos, pow_pos_le] \\
-      gvs [mul_lcancel] \\
-      METIS_TAC [expectation_add, expectation_const]
-
-
-  )
-
-
-    >> Suff ‘expectation p
-             (λx.
-                Normal 4 * (abs (X i x))³ +
+    rw [absolute_third_moments_def, absolute_moment_def, absolute_third_moment_def]
+ >> Know ‘∀i. integrable p (λx. (abs (X i x − expectation p (X i)))³)’
+ >- (Q.X_GEN_TAC ‘i’ >> clt_integrable_sub_const_i)
+ >> DISCH_TAC
+ >> Know ‘∀i. integrable p (λx. (abs (X i x))³ + (abs (expectation p (X i)))³)’
+ >- (Q.X_GEN_TAC ‘i’ \\
+     HO_MATCH_MP_TAC integrable_add' >> fs [prob_space_def] \\
+     ‘expectation p (X i) ≠ PosInf ∧ expectation p (X i) ≠ NegInf’
+       by METIS_TAC [integrable_finite_integral, prob_space_def,
+                     expectation_def, extreal_cases] \\
+     ‘∃r. expectation p (X i) = Normal r’ by METIS_TAC [extreal_cases] \\
+     gvs [pow_abs, extreal_abs_def, extreal_pow_def, integrable_const])
+ >> DISCH_TAC
+ >> Know ‘∀i. integrable p (λx. Normal 4 * (abs (X i x))³ +
+                                Normal 4 * (abs (expectation p (X i)))³)’
+ >- (Q.X_GEN_TAC ‘i’ \\
+     gvs [GSYM add_ldistrib_pos, abs_pos, GSYM pow_abs] \\
+     HO_MATCH_MP_TAC integrable_cmul >> fs [prob_space_def])
+ >> DISCH_TAC
+ >> (MP_TAC o (Q.SPECL [‘count n’]) o
+            (INST_TYPE [alpha |-> ``:num``])) (GSYM EXTREAL_SUM_IMAGE_CMUL)
+ >> rw [extreal_of_num_def]
+ >> POP_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [‘λi. expectation p (λx. (abs (X i x))³)’, ‘8’])
+ >> ‘(∀x. x < n ⇒ (λi. expectation p (λx. (abs (X i x))³)) x ≠ −∞)’
+   by METIS_TAC [cj 2 integrable_imp_finite_expectation] >> gvs []
+ >> HO_MATCH_MP_TAC EXTREAL_SUM_IMAGE_MONO' >> simp []
+ >> Q.X_GEN_TAC ‘i’ >> STRIP_TAC
+ >> MATCH_MP_TAC le_trans
+ >> qexists ‘expectation p (λx. Normal 4 * (abs (X i x))³ +
+                                Normal 4 * (abs (expectation p (X i)))³)’
+ >> CONJ_TAC
+ >- (irule expectation_mono >> gvs [GSYM extreal_of_num_def] \\
+     Q.X_GEN_TAC ‘x’ >> STRIP_TAC \\
+     HO_MATCH_MP_TAC abs_sub_pow3_bound \\
+     METIS_TAC [real_random_variable, integrable_imp_finite_expectation])
+ >> Know ‘expectation p
+           (λx. Normal 4 * (abs (X i x))³ +
                 Normal 4 * (abs (expectation p (X i)))³) =
-                Normal 4 * expectation p (λx. (abs (X i x))³) +
-                Normal 4 * (abs (expectation p (X i)))³’
-    >- (Rewr \\
-        MATCH_MP_TAC leeq_trans \\
-        qexists ‘Normal 4 * expectation p (λx. (abs (X i x))³) +
-                 Normal 4 * expectation p (λx. (abs (X i x))³)’ \\
-        CONJ_TAC
-        >- (MATCH_MP_TAC le_ladd_imp \\
-            MATCH_MP_TAC le_lmul_imp >> gvs [] \\
-
-            MP_TAC (Q.SPECL [‘p’, ‘X (i :num)’, ‘Normal 1’, ‘Normal 3’ ] Lyapunov_ineq_rv) \\
-            impl_tac
-            >- (gvs [GSYM extreal_of_num_def, GSYM L1_space_alt_integrable,
-                     lp_space_alt_finite'] \\
-                gvs [prob_space_def, real_random_variable, p_space_def, events_def] \\
-                gvs [abs_abs, GSYM gen_powr, pow_abs]) \\
-            simp [seminorm_def, GSYM extreal_of_num_def, gen_powr] \\
-            simp [gen_powr, powr_powr, pos_fn_integral_pos, prob_space_def, abs_pos]
-
-
-  )
-
-    >> Know ‘expectation p
-             (λx.
-                Normal 4 * (abs (X i x))³ +
-                Normal 4 * (abs (expectation p (X i)))³) =
-             Normal 4 * expectation p (λx. (abs (X i x))³) +
-             Normal 4 * (abs (expectation p (X i)))³’
-    >- (
-
-
-  )
-
-
-
-
-
-
-    >> MP_TAC (Q.SPECL [‘p’, ‘λx'. (abs (X (i :num) x'))³’, ‘8’] (GSYM expectation_cmul))
-    >> rw [] >> POP_ORW
-
-    >> irule le_trans
-    >> qexists ‘4 * expectation p (λx. (abs (X i x))³) +
-                4 * (abs (expectation p (X i)))³’
-    >> CONJ_TAC
-    >- (MP_TAC (Q.SPECL [‘λx. X i x’, ‘expectation p (X i)’] abs_sub_pow3_bound)
-
-
-
-
-  )
-
-
-
-
-
-    >> HO_MATCH_MP_TAC expectation_mono >> gvs []
-    >> CONJ_TAC
-    >- (
-
-
-     irule integrable_bounded >> fs [prob_space_def] \\
-      CONJ_TAC >- (HO_MATCH_MP_TAC IN_MEASURABLE_BOREL_POW \\
-                   HO_MATCH_MP_TAC IN_MEASURABLE_BOREL_ABS \\
-                   qexists ‘λx. X i x − expectation p (X i)’ \\
-                   fs [MEASURE_SPACE_SIGMA_ALGEBRA] \\
-                   irule IN_MEASURABLE_BOREL_SUB' \\
-                   fs [MEASURE_SPACE_SIGMA_ALGEBRA] \\
-                   qexistsl [‘λx. X i x’, ‘λx.  expectation p (X i)’] \\
-                   fs [IN_MEASURABLE_BOREL_CONST', MEASURE_SPACE_SIGMA_ALGEBRA,
-                       real_random_variable, p_space_def, events_def] \\
-                   METIS_TAC []) \\
-      qexists ‘λx. 4 * (abs (X i x))³ + 4 * (abs (expectation p (X i)))³’ \\
-      CONJ_TAC >- (rw [abs_abs, pow_abs] \\
-                   HO_MATCH_MP_TAC abs_sub_pow3_bound \\
-                   fs [real_random_variable, expectation_def] \\
-                   METIS_TAC [integrable_finite_integral, p_space_def]) \\
-      HO_MATCH_MP_TAC integrable_add' >> simp [] \\
-      CONJ_TAC >- (METIS_TAC [integrable_cmul, extreal_of_num_def]) \\
-      ‘expectation p (X i) ≠ PosInf ∧ expectation p (X i) ≠ NegInf’
-        by METIS_TAC [integrable_finite_integral, prob_space_def,
-                      expectation_def, extreal_cases] \\
-      ‘∃r. expectation p (X i) = Normal r’ by METIS_TAC [extreal_cases] \\
-      rw [extreal_abs_def, extreal_mul_eq, extreal_of_num_def, extreal_pow_def] \\
-     irule integrable_const >> fs [extreal_1_simps])
-
-    >> CONJ_TAC >- (HO_MATCH_MP_TAC integrable_cmul >> gvs [prob_space_def])
-    >> Q.X_GEN_TAC ‘x’ >> STRIP_TAC
-
-
-
-
-
-
-
-
-
+          Normal 4 * expectation p (λx. (abs (X i x))³) +
+          Normal 4 * (abs (expectation p (X i)))³’
+ >- (gvs [expectation_cmul, GSYM add_ldistrib_pos, expectation_pos, abs_pos, pow_pos_le] \\
+     gvs [mul_lcancel] \\
+     ‘expectation p (X i) ≠ PosInf ∧ expectation p (X i) ≠ NegInf’
+       by METIS_TAC [integrable_finite_integral, prob_space_def,
+                     expectation_def, extreal_cases] \\
+     ‘∃r. expectation p (X i) = Normal r’ by METIS_TAC [extreal_cases] \\
+     gvs [pow_abs, extreal_abs_def, extreal_pow_def] \\
+     MP_TAC (Q.SPECL [‘p’, ‘λx. (abs (X (i:num) x))³’, ‘λx. Normal (abs r)³’] (expectation_add)) \\
+     fs [integrable_const, prob_space_def] >> DISCH_TAC \\
+     POP_ASSUM K_TAC \\
+     METIS_TAC [expectation_const, prob_space_def])
+ >> Rewr      
+ >> MATCH_MP_TAC leeq_trans 
+ >> qexists ‘Normal 4 * expectation p (λx. (abs (X i x))³) +
+             Normal 4 * expectation p (λx. (abs (X i x))³)’
+ >> reverse CONJ_TAC
+ >- (‘expectation p (λx. (abs (X i x))³) ≠ NegInf ∧ expectation p (λx. (abs (X i x))³) ≠ PosInf’
+       by METIS_TAC [integrable_imp_finite_expectation] \\
+     ‘∃r. expectation p (λx. (abs (X i x))³) = Normal r’ by METIS_TAC [extreal_cases] \\
+     gvs [extreal_mul_eq, extreal_add_eq] >> REAL_ARITH_TAC)
+ >> MATCH_MP_TAC le_ladd_imp
+ >> MATCH_MP_TAC le_lmul_imp >> simp []
+ >> HO_MATCH_MP_TAC abs_expectation_pow_le_expectation_abs_pow >> gvs []
+ >> METIS_TAC []
 QED
 
 val clt_handle_moments =
